@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}
+Admin Dashboard | ShopEase
+{% endblock %}
+
+
+{% block content %}
+
+<div class="container py-5">
+
+    <div class="mb-5">
+
+        <h2 class="fw-bold">
+            Admin Dashboard
+        </h2>
+
+        <p class="text-muted">
+            Welcome back,
+            {{ session.get("admin_name") }}.
+        </p>
+
+    </div>
+
+
+    <div class="row g-4">
+
+        <!-- Categories -->
+
+        <div class="col-md-6 col-lg-4">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <h5 class="fw-bold">
+                        Categories
+                    </h5>
+
+                    <p class="text-muted">
+                        Manage product categories.
+                    </p>
+
+                    <a
+                        href="{{ url_for('admin.categories') }}"
+                        class="btn btn-primary"
+                    >
+                        Manage Categories
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-md-6 col-lg-4">
+
+    <div class="card border-0 shadow-sm h-100">
+
+        <div class="card-body">
+
+            <h5 class="fw-bold">
+                Subcategories
+            </h5>
+
+            <p class="text-muted">
+                Manage product subcategories.
+            </p>
+
+            <a
+                href="{{ url_for('admin.subcategories') }}"
+                class="btn btn-primary"
+            >
+                Manage Subcategories
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<div class="col-md-6 col-lg-4">
+
+    <div class="card border-0 shadow-sm h-100">
+
+        <div class="card-body">
+
+            <h5 class="fw-bold">
+                Brands
+            </h5>
+
+            <p class="text-muted">
+                Manage product brands.
+            </p>
+
+            <a
+                href="{{ url_for('admin.brands') }}"
+                class="btn btn-primary"
+            >
+                Manage Brands
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+        <!-- Products -->
+
+        <div class="col-md-6 col-lg-4">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <h5 class="fw-bold">
+                        Products
+                    </h5>
+
+                    <p class="text-muted">
+                        Product management will be added next.
+                    </p>
+
+                    <button
+                        class="btn btn-outline-secondary"
+                        disabled
+                    >
+                        Coming Next
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- Orders -->
+
+        <div class="col-md-6 col-lg-4">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <h5 class="fw-bold">
+                        Orders
+                    </h5>
+
+                    <p class="text-muted">
+                        Order management will be added later.
+                    </p>
+
+                    <button
+                        class="btn btn-outline-secondary"
+                        disabled
+                    >
+                        Coming Later
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+

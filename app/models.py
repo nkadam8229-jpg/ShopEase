@@ -1,0 +1,450 @@
+from datetime import datetime
+
+from app import db
+
+
+class User(db.Model):
+    __tablename__ = "users"
+
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+
+    full_name = db.Column(db.String(100), nullable=False)
+
+    email = db.Column(
+        db.String(150),
+        unique=True,
+        nullable=False,
+        index=True
+    )
+
+    phone = db.Column(
+        db.String(20),
+        unique=True,
+        nullable=False,
+        index=True
+    )
+
+    password_hash = db.Column(
+        db.String(255),
+        nullable=False
+    )
+
+    is_active = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow
+    )
+
+    def __repr__(self):
+        return f"<User {self.email}>"
+
+
+
+class Admin(db.Model):
+    __tablename__ = "admins"
+
+    id = db.Column(
+        db.BigInteger,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    full_name = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+    email = db.Column(
+        db.String(150),
+        unique=True,
+        nullable=False,
+        index=True
+    )
+
+    password_hash = db.Column(
+        db.String(255),
+        nullable=False
+    )
+
+    role = db.Column(
+        db.Enum("SUPER_ADMIN", "ADMIN"),
+        nullable=False,
+        default="ADMIN"
+    )
+
+    is_active = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow
+    )
+
+    def __repr__(self):
+        return f"<Admin {self.email}>"
+
+
+class Category(db.Model):
+    __tablename__ = "categories"
+
+    id = db.Column(
+        db.BigInteger,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    name = db.Column(
+        db.String(100),
+        unique=True,
+        nullable=False
+    )
+
+    slug = db.Column(
+        db.String(120),
+        unique=True,
+        nullable=False
+    )
+
+    image_key = db.Column(
+        db.String(500),
+        nullable=True
+    )
+
+    is_active = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow
+    )
+
+    def __repr__(self):
+        return f"<Category {self.name}>"
+
+
+class Subcategory(db.Model):
+    __tablename__ = "subcategories"
+
+    id = db.Column(
+        db.BigInteger,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    category_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("categories.id"),
+        nullable=False,
+        index=True
+    )
+
+    name = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+    slug = db.Column(
+        db.String(120),
+        nullable=False
+    )
+
+    image_key = db.Column(
+        db.String(500),
+        nullable=True
+    )
+
+    is_active = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow
+    )
+
+    category = db.relationship(
+        "Category",
+        backref=db.backref(
+            "subcategories",
+            lazy=True
+        )
+    )
+
+    def __repr__(self):
+        return f"<Subcategory {self.name}>"
+
+
+class Brand(db.Model):
+    __tablename__ = "brands"
+
+    id = db.Column(
+        db.BigInteger,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    name = db.Column(
+        db.String(100),
+        unique=True,
+        nullable=False
+    )
+
+    slug = db.Column(
+        db.String(120),
+        unique=True,
+        nullable=False
+    )
+
+    logo_key = db.Column(
+        db.String(500),
+        nullable=True
+    )
+
+    is_active = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow
+    )
+
+    def __repr__(self):
+        return f"<Brand {self.name}>"
+
+
+
+# =========================================================
+# PRODUCT
+# =========================================================
+
+class Product(db.Model):
+
+    __tablename__ = "products"
+
+    id = db.Column(
+        db.BigInteger,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    category_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("categories.id"),
+        nullable=False
+    )
+
+    subcategory_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("subcategories.id"),
+        nullable=True
+    )
+
+    brand_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("brands.id"),
+        nullable=True
+    )
+
+    sku = db.Column(
+        db.String(50),
+        unique=True,
+        nullable=False
+    )
+
+    name = db.Column(
+        db.String(200),
+        nullable=False
+    )
+
+    slug = db.Column(
+        db.String(220),
+        unique=True,
+        nullable=False
+    )
+
+    description = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    specifications = db.Column(
+        db.JSON,
+        nullable=True
+    )
+
+    price = db.Column(
+        db.Numeric(12, 2),
+        nullable=False
+    )
+
+    stock_quantity = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    featured = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False
+    )
+
+    is_active = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp()
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+        onupdate=db.func.current_timestamp()
+    )
+
+    category = db.relationship(
+        "Category",
+        backref=db.backref(
+            "products",
+            lazy=True
+        )
+    )
+
+    subcategory = db.relationship(
+        "Subcategory",
+        backref=db.backref(
+            "products",
+            lazy=True
+        )
+    )
+
+    brand = db.relationship(
+        "Brand",
+        backref=db.backref(
+            "products",
+            lazy=True
+        )
+    )
+
+    images = db.relationship(
+        "ProductImage",
+        back_populates="product",
+        cascade="all, delete-orphan",
+        order_by="ProductImage.display_order"
+    )
+
+
+# =========================================================
+# PRODUCT IMAGE
+# =========================================================
+
+class ProductImage(db.Model):
+
+    __tablename__ = "product_images"
+
+    id = db.Column(
+        db.BigInteger,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    product_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("products.id"),
+        nullable=False
+    )
+
+    image_key = db.Column(
+        db.String(500),
+        nullable=False
+    )
+
+    alt_text = db.Column(
+        db.String(255),
+        nullable=True
+    )
+
+    display_order = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    is_primary = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp()
+    )
+
+    product = db.relationship(
+        "Product",
+        back_populates="images"
+    )

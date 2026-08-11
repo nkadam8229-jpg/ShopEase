@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}
+Create Account | ShopEase
+{% endblock %}
+
+
+{% block content %}
+
+<section class="auth-section py-5">
+
+    <div class="container">
+
+        <div class="row justify-content-center">
+
+            <div class="col-md-7 col-lg-5">
+
+                <div class="auth-card">
+
+                    <div class="text-center mb-4">
+
+                        <h2 class="fw-bold">
+                            Create Your Account
+                        </h2>
+
+                        <p class="text-muted">
+                            Join ShopEase and start shopping.
+                        </p>
+
+                    </div>
+
+
+                    <!-- Flash Messages -->
+
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+
+                        {% if messages %}
+
+                            {% for category, message in messages %}
+
+                                <div class="alert alert-{{ category }}">
+                                    {{ message }}
+                                </div>
+
+                            {% endfor %}
+
+                        {% endif %}
+
+                    {% endwith %}
+
+
+                    <form method="POST">
+
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}"
+    >
+                        <!-- Full Name -->
+
+                        <div class="mb-3">
+
+                            <label
+                                for="full_name"
+                                class="form-label"
+                            >
+                                Full Name
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="full_name"
+                                name="full_name"
+                                placeholder="Enter your full name"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- Email -->
+
+                        <div class="mb-3">
+
+                            <label
+                                for="email"
+                                class="form-label"
+                            >
+                                Email Address
+                            </label>
+
+                            <input
+                                type="email"
+                                class="form-control"
+                                id="email"
+                                name="email"
+                                placeholder="Enter your email"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- Phone -->
+
+                        <div class="mb-3">
+
+                            <label
+                                for="phone"
+                                class="form-label"
+                            >
+                                Phone Number
+                            </label>
+
+                            <input
+                                type="tel"
+                                class="form-control"
+                                id="phone"
+                                name="phone"
+                                placeholder="10-digit phone number"
+                                maxlength="10"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- Password -->
+
+                        <div class="mb-3">
+
+                            <label
+                                for="password"
+                                class="form-label"
+                            >
+                                Password
+                            </label>
+
+                            <input
+                                type="password"
+                                class="form-control"
+                                id="password"
+                                name="password"
+                                placeholder="Minimum 8 characters"
+                                minlength="8"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- Confirm Password -->
+
+                        <div class="mb-4">
+
+                            <label
+                                for="confirm_password"
+                                class="form-label"
+                            >
+                                Confirm Password
+                            </label>
+
+                            <input
+                                type="password"
+                                class="form-control"
+                                id="confirm_password"
+                                name="confirm_password"
+                                placeholder="Re-enter your password"
+                                minlength="8"
+                                required
+                            >
+
+                        </div>
+
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary w-100"
+                        >
+                            Create Account
+                        </button>
+
+                    </form>
+
+
+                    <div class="text-center mt-4">
+
+                        <p class="mb-0 text-muted">
+                            Already have an account?
+                            <a href="{{ url_for('auth.login') }}">
+                                Login
+                            </a>
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+{% endblock %}

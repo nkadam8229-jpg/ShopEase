@@ -1,0 +1,183 @@
+/* =========================
+   GENERAL
+========================= */
+
+body {
+    font-family: Arial, sans-serif;
+    color: #212529;
+    background-color: #ffffff;
+}
+
+
+/* =========================
+   NAVBAR
+========================= */
+
+.navbar-brand {
+    font-size: 1.5rem;
+}
+
+.nav-link {
+    font-weight: 500;
+}
+
+.nav-link:hover {
+    color: #0d6efd !important;
+}
+
+
+/* =========================
+   HERO
+========================= */
+
+.hero-section {
+    background: linear-gradient(
+        135deg,
+        #f5f9ff,
+        #e8f1ff
+    );
+
+    min-height: 500px;
+
+    display: flex;
+    align-items: center;
+}
+
+.min-vh-75 {
+    min-height: 500px;
+}
+
+
+/* =========================
+   CATEGORY CARDS
+========================= */
+
+.category-card {
+    background: #ffffff;
+
+    border: 1px solid #e9ecef;
+
+    border-radius: 12px;
+
+    padding: 30px 15px;
+
+    text-align: center;
+
+    height: 100%;
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.category-card:hover {
+    transform: translateY(-5px);
+
+    box-shadow:
+        0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.category-icon {
+    font-size: 2.5rem;
+
+    margin-bottom: 15px;
+}
+
+.category-card h5 {
+    margin-bottom: 0;
+
+    font-weight: 600;
+}
+
+
+/* =========================
+   PRODUCTS
+========================= */
+
+.empty-products {
+    background: #ffffff;
+
+    border: 1px dashed #ced4da;
+
+    border-radius: 12px;
+
+    padding: 60px 20px;
+
+    text-align: center;
+}
+
+
+/* =========================
+   FEATURES
+========================= */
+
+.feature-box {
+    padding: 25px;
+}
+
+.feature-icon {
+    font-size: 2.5rem;
+
+    margin-bottom: 15px;
+}
+
+
+/* =========================
+   FOOTER
+========================= */
+
+.footer-link {
+    color: #ffffff;
+
+    text-decoration: none;
+
+    display: inline-block;
+
+    margin-bottom: 8px;
+}
+
+.footer-link:hover {
+    color: #0d6efd;
+}
+
+
+/* =========================
+   AUTHENTICATION
+========================= */
+
+.auth-section {
+    min-height: 70vh;
+
+    background-color: #f8f9fa;
+
+    display: flex;
+
+    align-items: center;
+}
+
+
+.auth-card {
+    background-color: #ffffff;
+
+    border: 1px solid #e9ecef;
+
+    border-radius: 12px;
+
+    padding: 35px;
+
+    box-shadow:
+        0 5px 20px rgba(0, 0, 0, 0.06);
+}
+
+
+.auth-card .form-control {
+    min-height: 46px;
+}
+
+
+.auth-card .form-control:focus {
+    border-color: #0d6efd;
+
+    box-shadow:
+        0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}

@@ -220,41 +220,60 @@
 
                             <!-- Brand -->
 
-                            <div class="col-md-4 mb-4">
+                            <div class="mb-3">
 
-                                <label
-                                    for="brand_id"
-                                    class="form-label fw-semibold"
-                                >
-                                    Brand
-                                </label>
+    <label
+        for="brand_id"
+        class="form-label fw-semibold"
+    >
+        Brand
+        <span class="text-muted">(Optional)</span>
+    </label>
 
-                                <select
-                                    class="form-select"
-                                    id="brand_id"
-                                    name="brand_id"
-                                >
 
-                                    <option value="">
-                                        Select Brand
-                                    </option>
+    <div class="d-flex gap-2">
 
-                                    {% for brand in brands %}
+        <select
+            class="form-select"
+            id="brand_id"
+            name="brand_id"
+        >
 
-                                        <option
-    value="{{ brand.id }}"
-    {% if product and product.brand_id == brand.id %}
-        selected
-    {% endif %}
->
-    {{ brand.name }}
-</option>
+            <option value="">
+                No Brand / Local Product
+            </option>
 
-                                    {% endfor %}
+            {% for brand in brands %}
 
-                                </select>
+                <option
+                    value="{{ brand.id }}"
+                    {% if product and product.brand_id == brand.id %}
+                        selected
+                    {% endif %}
+                >
+                    {{ brand.name }}
+                </option>
 
-                            </div>
+            {% endfor %}
+
+        </select>
+
+
+        <a
+            href="{{ url_for('admin.add_brand') }}"
+            class="btn btn-outline-primary text-nowrap"
+        >
+            + Add New Brand
+        </a>
+
+    </div>
+
+
+    <div class="form-text">
+        Leave blank for local or unbranded products.
+    </div>
+
+</div>
 
                         </div>
 
@@ -348,31 +367,146 @@
 
                         <!-- Specifications -->
 
-                        <div class="mb-4">
+                        <!-- Specifications -->
 
-                            <label
-                                for="specifications"
-                                class="form-label fw-semibold"
-                            >
-                                Specifications
-                            </label>
+<div class="mb-4">
 
-                            <textarea
-    class="form-control font-monospace"
-    id="specifications"
-    name="specifications"
-    rows="7"
-    placeholder='{
+    <label class="form-label fw-semibold">
+        Specifications
+    </label>
+
+    <!-- Specification Mode -->
+
+    <div class="btn-group mb-3" role="group">
+
+        <button
+            type="button"
+            class="btn btn-primary"
+            id="specTableMode"
+        >
+            Table
+        </button>
+
+        <button
+            type="button"
+            class="btn btn-outline-primary"
+            id="specJsonMode"
+        >
+            JSON
+        </button>
+
+    </div>
+
+
+    <!-- =========================
+         TABLE MODE
+    ========================== -->
+
+    <div id="specTableContainer">
+
+        <div
+            class="table-responsive border rounded"
+        >
+
+            <table
+                class="table table-bordered mb-0"
+                id="specificationsTable"
+            >
+
+                <thead class="table-light">
+
+                    <tr>
+
+                        <th>
+                            Specification
+                        </th>
+
+                        <th>
+                            Value
+                        </th>
+
+                        <th
+                            style="width: 70px;"
+                        >
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="specificationsBody">
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+        <button
+            type="button"
+            class="btn btn-outline-primary btn-sm mt-3"
+            id="addSpecification"
+        >
+            + Add Specification
+        </button>
+
+
+        <div class="form-text mt-2">
+
+            Add product specifications using
+            specification names and values.
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         JSON MODE
+    ========================== -->
+
+    <div
+        id="specJsonContainer"
+        style="display: none;"
+    >
+
+        <textarea
+            class="form-control font-monospace"
+            id="specificationsJson"
+            rows="10"
+            placeholder='{
   "color": "Black",
   "storage": "128GB",
   "ram": "8GB"
-}'>{% if product and product.specifications %}{{ product.specifications | tojson(indent=2) }}{% endif %}</textarea>
+}'
+        ></textarea>
 
-                            <div class="form-text">
-                                Enter specifications as a valid JSON object.
-                            </div>
 
-                        </div>
+        <div class="form-text">
+
+            Advanced mode. Enter a valid JSON object.
+
+        </div>
+
+    </div>
+
+
+    <!-- Actual field submitted to Flask -->
+
+    <textarea
+        id="specifications"
+        name="specifications"
+        style="display: none;"
+    ></textarea>
+
+
+    <div
+        id="specificationError"
+        class="text-danger small mt-2"
+        style="display: none;"
+    ></div>
+
+</div>
 
 
                         <!-- Featured -->
@@ -457,6 +591,11 @@ document.addEventListener(
     "DOMContentLoaded",
     function () {
 
+
+        /* =========================================
+           CATEGORY → SUBCATEGORY
+        ========================================= */
+
         const categorySelect =
             document.getElementById("category_id");
 
@@ -485,6 +624,7 @@ document.addEventListener(
                 document.createElement("option");
 
             defaultOption.value = "";
+
             defaultOption.textContent =
                 "Select Subcategory";
 
@@ -514,7 +654,8 @@ document.addEventListener(
                             selectedSubcategory
                         ) {
 
-                            newOption.selected = true;
+                            newOption.selected =
+                                true;
 
                         }
 
@@ -544,9 +685,577 @@ document.addEventListener(
             currentSubcategory
         );
 
+
+        /* =========================================
+           SPECIFICATION BUILDER
+        ========================================= */
+
+        const tableMode =
+            document.getElementById(
+                "specTableMode"
+            );
+
+        const jsonMode =
+            document.getElementById(
+                "specJsonMode"
+            );
+
+        const tableContainer =
+            document.getElementById(
+                "specTableContainer"
+            );
+
+        const jsonContainer =
+            document.getElementById(
+                "specJsonContainer"
+            );
+
+        const specificationsBody =
+            document.getElementById(
+                "specificationsBody"
+            );
+
+        const addSpecificationButton =
+            document.getElementById(
+                "addSpecification"
+            );
+
+        const specificationsField =
+            document.getElementById(
+                "specifications"
+            );
+
+        const specificationsJson =
+            document.getElementById(
+                "specificationsJson"
+            );
+
+        const specificationError =
+            document.getElementById(
+                "specificationError"
+            );
+
+
+        /* -----------------------------------------
+           Existing Product Specifications
+        ----------------------------------------- */
+
+        let existingSpecifications = {};
+
+        {% if product and product.specifications %}
+
+        existingSpecifications =
+            {{ product.specifications | tojson }};
+
+        {% endif %}
+
+
+        /* -----------------------------------------
+           Add Specification Row
+        ----------------------------------------- */
+
+        function addSpecificationRow(
+            key = "",
+            value = ""
+        ) {
+
+            const row =
+                document.createElement("tr");
+
+
+            const keyCell =
+                document.createElement("td");
+
+
+            const valueCell =
+                document.createElement("td");
+
+
+            const actionCell =
+                document.createElement("td");
+
+
+            const keyInput =
+                document.createElement("input");
+
+            keyInput.type = "text";
+
+            keyInput.className =
+                "form-control";
+
+            keyInput.placeholder =
+                "e.g. RAM";
+
+            keyInput.value =
+                key;
+
+
+            const valueInput =
+                document.createElement("input");
+
+            valueInput.type = "text";
+
+            valueInput.className =
+                "form-control";
+
+            valueInput.placeholder =
+                "e.g. 8 GB";
+
+            valueInput.value =
+                value;
+
+
+            const removeButton =
+                document.createElement("button");
+
+            removeButton.type =
+                "button";
+
+            removeButton.className =
+                "btn btn-outline-danger btn-sm";
+
+            removeButton.textContent =
+                "×";
+
+            removeButton.title =
+                "Remove specification";
+
+
+            keyCell.appendChild(
+                keyInput
+            );
+
+            valueCell.appendChild(
+                valueInput
+            );
+
+            actionCell.className =
+                "text-center align-middle";
+
+            actionCell.appendChild(
+                removeButton
+            );
+
+
+            row.appendChild(
+                keyCell
+            );
+
+            row.appendChild(
+                valueCell
+            );
+
+            row.appendChild(
+                actionCell
+            );
+
+
+            specificationsBody.appendChild(
+                row
+            );
+
+
+            keyInput.addEventListener(
+                "input",
+                syncTableToJson
+            );
+
+            valueInput.addEventListener(
+                "input",
+                syncTableToJson
+            );
+
+
+            removeButton.addEventListener(
+                "click",
+                function () {
+
+                    row.remove();
+
+                    syncTableToJson();
+
+                }
+            );
+
+        }
+
+
+        /* -----------------------------------------
+           Table → JSON
+        ----------------------------------------- */
+
+        function tableToObject() {
+
+            const result = {};
+
+            const rows =
+                specificationsBody.querySelectorAll(
+                    "tr"
+                );
+
+
+            rows.forEach(
+                function (row) {
+
+                    const inputs =
+                        row.querySelectorAll(
+                            "input"
+                        );
+
+                    const key =
+                        inputs[0].value.trim();
+
+                    const value =
+                        inputs[1].value.trim();
+
+
+                    if (key) {
+
+                        result[key] =
+                            value;
+
+                    }
+
+                }
+            );
+
+
+            return result;
+
+        }
+
+
+        function syncTableToJson() {
+
+            const result =
+                tableToObject();
+
+
+            const jsonString =
+                JSON.stringify(
+                    result,
+                    null,
+                    2
+                );
+
+
+            specificationsField.value =
+                jsonString;
+
+        }
+
+
+        /* -----------------------------------------
+           JSON → Table
+        ----------------------------------------- */
+
+        function jsonToTable(jsonObject) {
+
+            specificationsBody.innerHTML =
+                "";
+
+
+            Object.entries(
+                jsonObject
+            ).forEach(
+                function ([key, value]) {
+
+                    addSpecificationRow(
+                        key,
+                        value
+                    );
+
+                }
+            );
+
+        }
+
+
+        /* -----------------------------------------
+           Add Row
+        ----------------------------------------- */
+
+        addSpecificationButton.addEventListener(
+            "click",
+            function () {
+
+                addSpecificationRow();
+
+            }
+        );
+
+
+        /* -----------------------------------------
+           Table Mode
+        ----------------------------------------- */
+
+        tableMode.addEventListener(
+            "click",
+            function () {
+
+                let jsonObject = {};
+
+                try {
+
+                    if (
+                        specificationsJson.value.trim()
+                    ) {
+
+                        jsonObject =
+                            JSON.parse(
+                                specificationsJson.value
+                            );
+
+                    }
+
+                } catch (error) {
+
+                    specificationError.textContent =
+                        "Invalid JSON. Please correct it before switching to Table mode.";
+
+                    specificationError.style.display =
+                        "block";
+
+                    return;
+
+                }
+
+
+                specificationError.style.display =
+                    "none";
+
+
+                jsonToTable(
+                    jsonObject
+                );
+
+
+                tableContainer.style.display =
+                    "block";
+
+                jsonContainer.style.display =
+                    "none";
+
+
+                tableMode.className =
+                    "btn btn-primary";
+
+                jsonMode.className =
+                    "btn btn-outline-primary";
+
+
+                syncTableToJson();
+
+            }
+        );
+
+
+        /* -----------------------------------------
+           JSON Mode
+        ----------------------------------------- */
+
+        jsonMode.addEventListener(
+            "click",
+            function () {
+
+                syncTableToJson();
+
+
+                specificationsJson.value =
+                    specificationsField.value ||
+                    "{}";
+
+
+                tableContainer.style.display =
+                    "none";
+
+                jsonContainer.style.display =
+                    "block";
+
+
+                jsonMode.className =
+                    "btn btn-primary";
+
+                tableMode.className =
+                    "btn btn-outline-primary";
+
+
+                specificationError.style.display =
+                    "none";
+
+            }
+        );
+
+
+        /* -----------------------------------------
+           JSON Input
+        ----------------------------------------- */
+
+        specificationsJson.addEventListener(
+            "input",
+            function () {
+
+                specificationsErrorClear();
+
+            }
+        );
+
+
+        function specificationsErrorClear() {
+
+            specificationError.style.display =
+                "none";
+
+        }
+
+
+        /* -----------------------------------------
+           Form Submit
+        ----------------------------------------- */
+
+        const productForm =
+            document.querySelector(
+                "form"
+            );
+
+
+        productForm.addEventListener(
+            "submit",
+            function (event) {
+
+
+                /* JSON mode */
+
+                if (
+                    jsonContainer.style.display !==
+                    "none"
+                ) {
+
+                    const jsonText =
+                        specificationsJson.value.trim();
+
+
+                    if (!jsonText) {
+
+                        specificationsField.value =
+                            "";
+
+                        return;
+
+                    }
+
+
+                    try {
+
+                        const parsed =
+                            JSON.parse(
+                                jsonText
+                            );
+
+
+                        if (
+                            typeof parsed !==
+                            "object" ||
+                            Array.isArray(parsed) ||
+                            parsed === null
+                        ) {
+
+                            throw new Error();
+
+                        }
+
+
+                        specificationsField.value =
+                            JSON.stringify(
+                                parsed
+                            );
+
+
+                    } catch (error) {
+
+                        event.preventDefault();
+
+                        specificationError.textContent =
+                            "Please enter a valid JSON object.";
+
+                        specificationError.style.display =
+                            "block";
+
+                    }
+
+
+                    return;
+
+                }
+
+
+                /* Table mode */
+
+                syncTableToJson();
+
+
+                const jsonText =
+                    specificationsField.value.trim();
+
+
+                if (!jsonText) {
+
+                    specificationsField.value =
+                        "";
+
+                    return;
+
+                }
+
+
+                try {
+
+                    JSON.parse(
+                        jsonText
+                    );
+
+                } catch (error) {
+
+                    event.preventDefault();
+
+                    specificationError.textContent =
+                        "Please correct the specification values.";
+
+                    specificationError.style.display =
+                        "block";
+
+                }
+
+            }
+        );
+
+
+        /* -----------------------------------------
+           Initialize Existing Product
+        ----------------------------------------- */
+
+        if (
+            existingSpecifications &&
+            Object.keys(
+                existingSpecifications
+            ).length > 0
+        ) {
+
+            jsonToTable(
+                existingSpecifications
+            );
+
+            syncTableToJson();
+
+        } else {
+
+            addSpecificationRow();
+
+        }
+
+
     }
 );
 
 </script>
-
 {% endblock %}

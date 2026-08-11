@@ -1093,6 +1093,31 @@ def delete_subcategory(subcategory_id):
             url_for("admin.subcategories")
         )
 
+    # -----------------------------------------------------
+    # PRODUCT DEPENDENCY CHECK
+    # -----------------------------------------------------
+
+    product_exists = (
+        Product.query
+        .filter_by(
+            subcategory_id=subcategory.id
+        )
+        .first()
+    )
+
+    if product_exists:
+
+        flash(
+            "Subcategory cannot be deleted because it is "
+            "being used by one or more products. "
+            "Remove or reassign those products first.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("admin.subcategories")
+        )
+
     image_key = subcategory.image_key
 
     try:
@@ -1519,6 +1544,31 @@ def delete_brand(brand_id):
 
         flash(
             "Brand not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("admin.brands")
+        )
+
+    # -----------------------------------------------------
+    # PRODUCT DEPENDENCY CHECK
+    # -----------------------------------------------------
+
+    product_exists = (
+        Product.query
+        .filter_by(
+            brand_id=brand.id
+        )
+        .first()
+    )
+
+    if product_exists:
+
+        flash(
+            "Brand cannot be deleted because it is "
+            "being used by one or more products. "
+            "Remove or reassign those products first.",
             "danger"
         )
 
@@ -1988,6 +2038,8 @@ def add_product():
         else:
 
             brand_id = None
+
+        
 
         # -------------------------------------------------
         # SKU VALIDATION

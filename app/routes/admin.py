@@ -16,7 +16,9 @@ from app.models import (
     Admin,
     Brand,
     Category,
-    Subcategory
+    Subcategory,
+    Product,
+    ProductImage
 )
 from app.services.upload_service import upload_image
 from app.services.storage_service import StorageService
@@ -28,7 +30,26 @@ admin_bp = Blueprint(
     url_prefix="/admin"
 )
 
+# =========================================================
+# ADMIN AUTHENTICATION GUARD
+# =========================================================
 
+@admin_bp.before_request
+def require_admin_login():
+
+    allowed_endpoints = {
+        "admin.login"
+    }
+
+    if request.endpoint in allowed_endpoints:
+        return None
+
+    if "admin_id" not in session:
+        return redirect(
+            url_for("admin.login")
+        )
+
+    return None
 # =========================================================
 # ADMIN LOGIN
 # =========================================================
@@ -1604,4 +1625,1912 @@ def brand_image(brand_id):
     return send_file(
         image_path,
         mimetype="image/webp"
+    )
+
+
+# =========================================================
+# PRODUCT LIST
+# =========================================================
+
+@admin_bp.route("/products")
+def products():
+
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    products = (
+        Product.query
+        .order_by(Product.created_at.desc())
+        .all()
+    )
+
+    return render_template(
+        "admin/products.html",
+        products=products
+    )
+
+
+# =========================================================
+# ADD PRODUCT
+# =========================================================
+
+@admin_bp.route(
+    "/products/add",
+    methods=["GET", "POST"]
+)
+def add_product():
+
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    categories = (
+        Category.query
+        .filter_by(is_active=True)
+        .order_by(Category.name.asc())
+        .all()
+    )
+
+    subcategories = (
+        Subcategory.query
+        .filter_by(is_active=True)
+        .order_by(Subcategory.name.asc())
+        .all()
+    )
+
+    brands = (
+        Brand.query
+        .filter_by(is_active=True)
+        .order_by(Brand.name.asc())
+        .all()
+    )
+
+    if request.method == "POST":
+
+        category_id = request.form.get(
+            "category_id",
+            ""
+        ).strip()
+
+        subcategory_id = request.form.get(
+            "subcategory_id",
+            ""
+        ).strip()
+
+        brand_id = request.form.get(
+            "brand_id",
+            ""
+        ).strip()
+
+        sku = request.form.get(
+            "sku",
+            ""
+        ).strip().upper()
+
+        name = request.form.get(
+            "name",
+            ""
+        ).strip()
+
+        description = request.form.get(
+            "description",
+            ""
+        ).strip()
+
+        specifications_text = request.form.get(
+            "specifications",
+            ""
+        ).strip()
+
+        price_text = request.form.get(
+            "price",
+            ""
+        ).strip()
+
+        stock_text = request.form.get(
+            "stock_quantity",
+            ""
+        ).strip()
+
+        featured = request.form.get(
+            "featured"
+        ) == "1"
+
+        is_active = request.form.get(
+            "is_active"
+        ) == "1"
+
+        # -------------------------------------------------
+        # REQUIRED FIELD VALIDATION
+        # -------------------------------------------------
+
+        if not category_id:
+
+            flash(
+                "Category is required.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=None,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        if not sku:
+
+            flash(
+                "SKU is required.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=None,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        if not name:
+
+            flash(
+                "Product name is required.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=None,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        if not price_text:
+
+            flash(
+                "Price is required.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=None,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        if not stock_text:
+
+            flash(
+                "Stock quantity is required.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=None,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        # -------------------------------------------------
+        # CATEGORY VALIDATION
+        # -------------------------------------------------
+
+        try:
+
+            category_id = int(category_id)
+
+        except ValueError:
+
+            flash(
+                "Invalid category selected.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=None,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        category = db.session.get(
+            Category,
+            category_id
+        )
+
+        if not category or not category.is_active:
+
+            flash(
+                "Selected category is invalid.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=None,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        # -------------------------------------------------
+        # SUBCATEGORY VALIDATION
+        # -------------------------------------------------
+
+        selected_subcategory = None
+
+        if subcategory_id:
+
+            try:
+
+                subcategory_id = int(
+                    subcategory_id
+                )
+
+            except ValueError:
+
+                flash(
+                    "Invalid subcategory selected.",
+                    "danger"
+                )
+
+                return render_template(
+                    "admin/product_form.html",
+                    product=None,
+                    categories=categories,
+                    subcategories=subcategories,
+                    brands=brands
+                )
+
+            selected_subcategory = db.session.get(
+                Subcategory,
+                subcategory_id
+            )
+
+            if (
+                not selected_subcategory
+                or not selected_subcategory.is_active
+            ):
+
+                flash(
+                    "Selected subcategory is invalid.",
+                    "danger"
+                )
+
+                return render_template(
+                    "admin/product_form.html",
+                    product=None,
+                    categories=categories,
+                    subcategories=subcategories,
+                    brands=brands
+                )
+
+            # Critical consistency check
+            if selected_subcategory.category_id != category.id:
+
+                flash(
+                    "Selected subcategory does not belong to the selected category.",
+                    "danger"
+                )
+
+                return render_template(
+                    "admin/product_form.html",
+                    product=None,
+                    categories=categories,
+                    subcategories=subcategories,
+                    brands=brands
+                )
+
+        else:
+
+            subcategory_id = None
+
+        # -------------------------------------------------
+        # BRAND VALIDATION
+        # -------------------------------------------------
+
+        selected_brand = None
+
+        if brand_id:
+
+            try:
+
+                brand_id = int(
+                    brand_id
+                )
+
+            except ValueError:
+
+                flash(
+                    "Invalid brand selected.",
+                    "danger"
+                )
+
+                return render_template(
+                    "admin/product_form.html",
+                    product=None,
+                    categories=categories,
+                    subcategories=subcategories,
+                    brands=brands
+                )
+
+            selected_brand = db.session.get(
+                Brand,
+                brand_id
+            )
+
+            if (
+                not selected_brand
+                or not selected_brand.is_active
+            ):
+
+                flash(
+                    "Selected brand is invalid.",
+                    "danger"
+                )
+
+                return render_template(
+                    "admin/product_form.html",
+                    product=None,
+                    categories=categories,
+                    subcategories=subcategories,
+                    brands=brands
+                )
+
+        else:
+
+            brand_id = None
+
+        # -------------------------------------------------
+        # SKU VALIDATION
+        # -------------------------------------------------
+
+        existing_product = Product.query.filter_by(
+            sku=sku
+        ).first()
+
+        if existing_product:
+
+            flash(
+                "A product with this SKU already exists.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=None,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        # -------------------------------------------------
+        # SLUG GENERATION
+        # -------------------------------------------------
+
+        base_slug = "-".join(
+            name.lower().split()
+        )
+
+        slug = base_slug
+
+        counter = 2
+
+        while Product.query.filter_by(
+            slug=slug
+        ).first():
+
+            slug = f"{base_slug}-{counter}"
+
+            counter += 1
+
+        # -------------------------------------------------
+        # PRICE VALIDATION
+        # -------------------------------------------------
+
+        try:
+
+            price = float(price_text)
+
+        except ValueError:
+
+            flash(
+                "Price must be a valid number.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=None,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        if price <= 0:
+
+            flash(
+                "Price must be greater than 0.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=None,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        # -------------------------------------------------
+        # STOCK VALIDATION
+        # -------------------------------------------------
+
+        try:
+
+            stock_quantity = int(
+                stock_text
+            )
+
+        except ValueError:
+
+            flash(
+                "Stock quantity must be a whole number.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=None,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        if stock_quantity < 0:
+
+            flash(
+                "Stock quantity cannot be negative.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=None,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        # -------------------------------------------------
+        # SPECIFICATIONS JSON
+        # -------------------------------------------------
+
+        specifications = None
+
+        if specifications_text:
+
+            import json
+
+            try:
+
+                specifications = json.loads(
+                    specifications_text
+                )
+
+            except json.JSONDecodeError:
+
+                flash(
+                    "Specifications must contain valid JSON.",
+                    "danger"
+                )
+
+                return render_template(
+                    "admin/product_form.html",
+                    product=None,
+                    categories=categories,
+                    subcategories=subcategories,
+                    brands=brands
+                )
+
+            if not isinstance(
+                specifications,
+                dict
+            ):
+
+                flash(
+                    "Specifications must be a JSON object.",
+                    "danger"
+                )
+
+                return render_template(
+                    "admin/product_form.html",
+                    product=None,
+                    categories=categories,
+                    subcategories=subcategories,
+                    brands=brands
+                )
+
+        # -------------------------------------------------
+        # CREATE PRODUCT
+        # -------------------------------------------------
+
+        product = Product(
+            category_id=category.id,
+            subcategory_id=subcategory_id,
+            brand_id=brand_id,
+            sku=sku,
+            name=name,
+            slug=slug,
+            description=description or None,
+            specifications=specifications,
+            price=price,
+            stock_quantity=stock_quantity,
+            featured=featured,
+            is_active=is_active
+        )
+
+        try:
+
+            db.session.add(product)
+            db.session.commit()
+
+        except IntegrityError:
+
+            db.session.rollback()
+
+            flash(
+                "Unable to create product. "
+                "Please check the SKU and product details.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=None,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        flash(
+            "Product created successfully.",
+            "success"
+        )
+
+        return redirect(
+            url_for("admin.products")
+        )
+
+    return render_template(
+        "admin/product_form.html",
+        product=None,
+        categories=categories,
+        subcategories=subcategories,
+        brands=brands
+    )
+
+
+# =========================================================
+# PRODUCT IMAGE MANAGEMENT
+# =========================================================
+
+@admin_bp.route(
+    "/products/<int:product_id>/images",
+    methods=["GET", "POST"]
+)
+def product_images(product_id):
+
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    product = db.session.get(
+        Product,
+        product_id
+    )
+
+    if not product:
+
+        flash(
+            "Product not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("admin.products")
+        )
+
+    if request.method == "POST":
+
+        image_files = request.files.getlist(
+            "images"
+        )
+
+        valid_files = [
+            image
+            for image in image_files
+            if image and image.filename
+        ]
+
+        if not valid_files:
+
+            flash(
+                "Please select at least one image.",
+                "danger"
+            )
+
+            return redirect(
+                url_for(
+                    "admin.product_images",
+                    product_id=product.id
+                )
+            )
+
+        uploaded_images = []
+
+        try:
+
+            existing_images_count = (
+                ProductImage.query
+                .filter_by(
+                    product_id=product.id
+                )
+                .count()
+            )
+
+            for index, image in enumerate(
+                valid_files
+            ):
+
+                image_key = upload_image(
+                    image,
+                    "products"
+                )
+
+                product_image = ProductImage(
+                    product_id=product.id,
+                    image_key=image_key,
+                    alt_text=product.name,
+                    display_order=(
+                        existing_images_count + index
+                    ),
+                    is_primary=(
+                        existing_images_count == 0
+                        and index == 0
+                    )
+                )
+
+                db.session.add(
+                    product_image
+                )
+
+                uploaded_images.append(
+                    image_key
+                )
+
+            db.session.commit()
+
+        except Exception:
+
+            db.session.rollback()
+
+            # Remove uploaded files if database
+            # operation fails.
+            for image_key in uploaded_images:
+
+                StorageService().delete(
+                    image_key
+                )
+
+            flash(
+                "Unable to upload product images.",
+                "danger"
+            )
+
+            return redirect(
+                url_for(
+                    "admin.product_images",
+                    product_id=product.id
+                )
+            )
+
+        flash(
+            f"{len(valid_files)} product image(s) uploaded successfully.",
+            "success"
+        )
+
+        return redirect(
+            url_for(
+                "admin.product_images",
+                product_id=product.id
+            )
+        )
+
+    images = (
+        ProductImage.query
+        .filter_by(
+            product_id=product.id
+        )
+        .order_by(
+            ProductImage.display_order.asc(),
+            ProductImage.id.asc()
+        )
+        .all()
+    )
+
+    return render_template(
+        "admin/product_images.html",
+        product=product,
+        images=images
+    )
+
+
+# =========================================================
+# PRODUCT IMAGE VIEW
+# =========================================================
+
+@admin_bp.route(
+    "/products/<int:product_id>/images/<int:image_id>/view"
+)
+def product_image_view(
+    product_id,
+    image_id
+):
+
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    image = (
+        ProductImage.query
+        .filter_by(
+            id=image_id,
+            product_id=product_id
+        )
+        .first()
+    )
+
+    if not image:
+
+        return "", 404
+
+    storage = StorageService()
+
+    image_path = storage.get_path(
+        image.image_key
+    )
+
+    if not image_path or not image_path.exists():
+
+        return "", 404
+
+    from flask import send_file
+
+    return send_file(
+        image_path,
+        mimetype="image/webp"
+    )
+
+# =========================================================
+# SET PRIMARY PRODUCT IMAGE
+# =========================================================
+
+@admin_bp.route(
+    "/products/<int:product_id>/images/<int:image_id>/primary",
+    methods=["POST"]
+)
+def set_primary_product_image(
+    product_id,
+    image_id
+):
+
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    product = db.session.get(
+        Product,
+        product_id
+    )
+
+    if not product:
+
+        flash(
+            "Product not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("admin.products")
+        )
+
+    image = (
+        ProductImage.query
+        .filter_by(
+            id=image_id,
+            product_id=product.id
+        )
+        .first()
+    )
+
+    if not image:
+
+        flash(
+            "Product image not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for(
+                "admin.product_images",
+                product_id=product.id
+            )
+        )
+
+    try:
+
+        # Remove primary status from all
+        # images belonging to this product.
+        (
+            ProductImage.query
+            .filter_by(
+                product_id=product.id
+            )
+            .update(
+                {
+                    ProductImage.is_primary: False
+                },
+                synchronize_session=False
+            )
+        )
+
+        # Set selected image as primary.
+        image.is_primary = True
+
+        db.session.commit()
+
+    except Exception:
+
+        db.session.rollback()
+
+        flash(
+            "Unable to set primary image.",
+            "danger"
+        )
+
+        return redirect(
+            url_for(
+                "admin.product_images",
+                product_id=product.id
+            )
+        )
+
+    flash(
+        "Primary product image updated successfully.",
+        "success"
+    )
+
+    return redirect(
+        url_for(
+            "admin.product_images",
+            product_id=product.id
+        )
+    )
+
+
+# =========================================================
+# DELETE PRODUCT IMAGE
+# =========================================================
+
+@admin_bp.route(
+    "/products/<int:product_id>/images/<int:image_id>/delete",
+    methods=["POST"]
+)
+def delete_product_image(
+    product_id,
+    image_id
+):
+
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    product = db.session.get(
+        Product,
+        product_id
+    )
+
+    if not product:
+
+        flash(
+            "Product not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("admin.products")
+        )
+
+    image = (
+        ProductImage.query
+        .filter_by(
+            id=image_id,
+            product_id=product.id
+        )
+        .first()
+    )
+
+    if not image:
+
+        flash(
+            "Product image not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for(
+                "admin.product_images",
+                product_id=product.id
+            )
+        )
+
+    image_key = image.image_key
+    was_primary = image.is_primary
+
+    try:
+
+        db.session.delete(image)
+        db.session.commit()
+
+    except Exception:
+
+        db.session.rollback()
+
+        flash(
+            "Unable to delete product image.",
+            "danger"
+        )
+
+        return redirect(
+            url_for(
+                "admin.product_images",
+                product_id=product.id
+            )
+        )
+
+    # Delete physical image only after
+    # successful database deletion.
+    if image_key:
+
+        StorageService().delete(
+            image_key
+        )
+
+    # If the deleted image was primary,
+    # automatically make the first remaining
+    # image primary.
+    if was_primary:
+
+        remaining_image = (
+            ProductImage.query
+            .filter_by(
+                product_id=product.id
+            )
+            .order_by(
+                ProductImage.display_order.asc(),
+                ProductImage.id.asc()
+            )
+            .first()
+        )
+
+        if remaining_image:
+
+            remaining_image.is_primary = True
+
+            db.session.commit()
+
+    flash(
+        "Product image permanently deleted.",
+        "success"
+    )
+
+    return redirect(
+        url_for(
+            "admin.product_images",
+            product_id=product.id
+        )
+    )
+
+
+# =========================================================
+# UPDATE PRODUCT IMAGE ORDER
+# =========================================================
+
+@admin_bp.route(
+    "/products/<int:product_id>/images/order",
+    methods=["POST"]
+)
+def update_product_image_order(product_id):
+
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    product = db.session.get(
+        Product,
+        product_id
+    )
+
+    if not product:
+
+        flash(
+            "Product not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("admin.products")
+        )
+
+    images = (
+        ProductImage.query
+        .filter_by(
+            product_id=product.id
+        )
+        .all()
+    )
+
+    try:
+
+        for image in images:
+
+            order_value = request.form.get(
+                f"display_order_{image.id}",
+                ""
+            ).strip()
+
+            if not order_value:
+
+                raise ValueError(
+                    "Display order cannot be empty."
+                )
+
+            order_value = int(
+                order_value
+            )
+
+            if order_value < 0:
+
+                raise ValueError(
+                    "Display order cannot be negative."
+                )
+
+            image.display_order = order_value
+
+        db.session.commit()
+
+    except (ValueError, TypeError):
+
+        db.session.rollback()
+
+        flash(
+            "Display order must contain valid non-negative numbers.",
+            "danger"
+        )
+
+        return redirect(
+            url_for(
+                "admin.product_images",
+                product_id=product.id
+            )
+        )
+
+    except Exception:
+
+        db.session.rollback()
+
+        flash(
+            "Unable to update image order.",
+            "danger"
+        )
+
+        return redirect(
+            url_for(
+                "admin.product_images",
+                product_id=product.id
+            )
+        )
+
+    flash(
+        "Product image order updated successfully.",
+        "success"
+    )
+
+    return redirect(
+        url_for(
+            "admin.product_images",
+            product_id=product.id
+        )
+    )
+
+
+# =========================================================
+# EDIT PRODUCT
+# =========================================================
+
+@admin_bp.route(
+    "/products/<int:product_id>/edit",
+    methods=["GET", "POST"]
+)
+def edit_product(product_id):
+
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    product = db.session.get(
+        Product,
+        product_id
+    )
+
+    if not product:
+
+        flash(
+            "Product not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("admin.products")
+        )
+
+    categories = (
+        Category.query
+        .filter_by(is_active=True)
+        .order_by(Category.name.asc())
+        .all()
+    )
+
+    subcategories = (
+        Subcategory.query
+        .filter_by(is_active=True)
+        .order_by(Subcategory.name.asc())
+        .all()
+    )
+
+    brands = (
+        Brand.query
+        .filter_by(is_active=True)
+        .order_by(Brand.name.asc())
+        .all()
+    )
+
+    if request.method == "POST":
+
+        category_id = request.form.get(
+            "category_id",
+            ""
+        ).strip()
+
+        subcategory_id = request.form.get(
+            "subcategory_id",
+            ""
+        ).strip()
+
+        brand_id = request.form.get(
+            "brand_id",
+            ""
+        ).strip()
+
+        sku = request.form.get(
+            "sku",
+            ""
+        ).strip().upper()
+
+        name = request.form.get(
+            "name",
+            ""
+        ).strip()
+
+        description = request.form.get(
+            "description",
+            ""
+        ).strip()
+
+        specifications_text = request.form.get(
+            "specifications",
+            ""
+        ).strip()
+
+        price_text = request.form.get(
+            "price",
+            ""
+        ).strip()
+
+        stock_text = request.form.get(
+            "stock_quantity",
+            ""
+        ).strip()
+
+        featured = request.form.get(
+            "featured"
+        ) == "1"
+
+        is_active = request.form.get(
+            "is_active"
+        ) == "1"
+
+        # -------------------------------------------------
+        # REQUIRED FIELDS
+        # -------------------------------------------------
+
+        if not category_id:
+
+            flash(
+                "Category is required.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=product,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        if not sku:
+
+            flash(
+                "SKU is required.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=product,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        if not name:
+
+            flash(
+                "Product name is required.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=product,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        if not price_text:
+
+            flash(
+                "Price is required.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=product,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        if not stock_text:
+
+            flash(
+                "Stock quantity is required.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=product,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        # -------------------------------------------------
+        # CATEGORY
+        # -------------------------------------------------
+
+        try:
+
+            category_id = int(category_id)
+
+        except ValueError:
+
+            flash(
+                "Invalid category selected.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=product,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        category = db.session.get(
+            Category,
+            category_id
+        )
+
+        if not category or not category.is_active:
+
+            flash(
+                "Selected category is invalid.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=product,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        # -------------------------------------------------
+        # SUBCATEGORY
+        # -------------------------------------------------
+
+        selected_subcategory = None
+
+        if subcategory_id:
+
+            try:
+
+                subcategory_id = int(
+                    subcategory_id
+                )
+
+            except ValueError:
+
+                flash(
+                    "Invalid subcategory selected.",
+                    "danger"
+                )
+
+                return render_template(
+                    "admin/product_form.html",
+                    product=product,
+                    categories=categories,
+                    subcategories=subcategories,
+                    brands=brands
+                )
+
+            selected_subcategory = db.session.get(
+                Subcategory,
+                subcategory_id
+            )
+
+            if (
+                not selected_subcategory
+                or not selected_subcategory.is_active
+            ):
+
+                flash(
+                    "Selected subcategory is invalid.",
+                    "danger"
+                )
+
+                return render_template(
+                    "admin/product_form.html",
+                    product=product,
+                    categories=categories,
+                    subcategories=subcategories,
+                    brands=brands
+                )
+
+            if selected_subcategory.category_id != category.id:
+
+                flash(
+                    "Selected subcategory does not belong to the selected category.",
+                    "danger"
+                )
+
+                return render_template(
+                    "admin/product_form.html",
+                    product=product,
+                    categories=categories,
+                    subcategories=subcategories,
+                    brands=brands
+                )
+
+        else:
+
+            subcategory_id = None
+
+        # -------------------------------------------------
+        # BRAND
+        # -------------------------------------------------
+
+        selected_brand = None
+
+        if brand_id:
+
+            try:
+
+                brand_id = int(brand_id)
+
+            except ValueError:
+
+                flash(
+                    "Invalid brand selected.",
+                    "danger"
+                )
+
+                return render_template(
+                    "admin/product_form.html",
+                    product=product,
+                    categories=categories,
+                    subcategories=subcategories,
+                    brands=brands
+                )
+
+            selected_brand = db.session.get(
+                Brand,
+                brand_id
+            )
+
+            if (
+                not selected_brand
+                or not selected_brand.is_active
+            ):
+
+                flash(
+                    "Selected brand is invalid.",
+                    "danger"
+                )
+
+                return render_template(
+                    "admin/product_form.html",
+                    product=product,
+                    categories=categories,
+                    subcategories=subcategories,
+                    brands=brands
+                )
+
+        else:
+
+            brand_id = None
+
+        # -------------------------------------------------
+        # SKU
+        # -------------------------------------------------
+
+        existing_product = (
+            Product.query
+            .filter(
+                Product.sku == sku,
+                Product.id != product.id
+            )
+            .first()
+        )
+
+        if existing_product:
+
+            flash(
+                "Another product with this SKU already exists.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=product,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        # -------------------------------------------------
+        # SLUG
+        # -------------------------------------------------
+
+        base_slug = "-".join(
+            name.lower().split()
+        )
+
+        slug = base_slug
+
+        counter = 2
+
+        while True:
+
+            existing_slug = (
+                Product.query
+                .filter(
+                    Product.slug == slug,
+                    Product.id != product.id
+                )
+                .first()
+            )
+
+            if not existing_slug:
+                break
+
+            slug = f"{base_slug}-{counter}"
+
+            counter += 1
+
+        # -------------------------------------------------
+        # PRICE
+        # -------------------------------------------------
+
+        try:
+
+            price = float(price_text)
+
+        except ValueError:
+
+            flash(
+                "Price must be a valid number.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=product,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        if price <= 0:
+
+            flash(
+                "Price must be greater than 0.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=product,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        # -------------------------------------------------
+        # STOCK
+        # -------------------------------------------------
+
+        try:
+
+            stock_quantity = int(
+                stock_text
+            )
+
+        except ValueError:
+
+            flash(
+                "Stock quantity must be a whole number.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=product,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        if stock_quantity < 0:
+
+            flash(
+                "Stock quantity cannot be negative.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=product,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        # -------------------------------------------------
+        # SPECIFICATIONS
+        # -------------------------------------------------
+
+        specifications = None
+
+        if specifications_text:
+
+            import json
+
+            try:
+
+                specifications = json.loads(
+                    specifications_text
+                )
+
+            except json.JSONDecodeError:
+
+                flash(
+                    "Specifications must contain valid JSON.",
+                    "danger"
+                )
+
+                return render_template(
+                    "admin/product_form.html",
+                    product=product,
+                    categories=categories,
+                    subcategories=subcategories,
+                    brands=brands
+                )
+
+            if not isinstance(
+                specifications,
+                dict
+            ):
+
+                flash(
+                    "Specifications must be a JSON object.",
+                    "danger"
+                )
+
+                return render_template(
+                    "admin/product_form.html",
+                    product=product,
+                    categories=categories,
+                    subcategories=subcategories,
+                    brands=brands
+                )
+
+        # -------------------------------------------------
+        # UPDATE PRODUCT
+        # -------------------------------------------------
+
+        product.category_id = category.id
+        product.subcategory_id = subcategory_id
+        product.brand_id = brand_id
+        product.sku = sku
+        product.name = name
+        product.slug = slug
+        product.description = description or None
+        product.specifications = specifications
+        product.price = price
+        product.stock_quantity = stock_quantity
+        product.featured = featured
+        product.is_active = is_active
+
+        try:
+
+            db.session.commit()
+
+        except IntegrityError:
+
+            db.session.rollback()
+
+            flash(
+                "Unable to update product. "
+                "Please check the product details.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=product,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+
+        flash(
+            "Product updated successfully.",
+            "success"
+        )
+
+        return redirect(
+            url_for("admin.products")
+        )
+
+    return render_template(
+        "admin/product_form.html",
+        product=product,
+        categories=categories,
+        subcategories=subcategories,
+        brands=brands
+    )
+
+
+# =========================================================
+# DELETE PRODUCT
+# =========================================================
+
+@admin_bp.route(
+    "/products/<int:product_id>/delete",
+    methods=["POST"]
+)
+def delete_product(product_id):
+
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    product = db.session.get(
+        Product,
+        product_id
+    )
+
+    if not product:
+
+        flash(
+            "Product not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("admin.products")
+        )
+
+    # -----------------------------------------------------
+    # ORDER DEPENDENCY CHECK
+    # -----------------------------------------------------
+    #
+    # A product that has appeared in an order must not
+    # be permanently deleted. The order_items table keeps
+    # the product reference as NULL after deletion, but
+    # preserves the historical product name, SKU and price.
+    #
+    # We therefore block deletion when order history exists.
+    # -----------------------------------------------------
+
+    order_item_count = db.session.execute(
+        db.text(
+            """
+            SELECT COUNT(*)
+            FROM order_items
+            WHERE product_id = :product_id
+            """
+        ),
+        {
+            "product_id": product.id
+        }
+    ).scalar()
+
+    if order_item_count and order_item_count > 0:
+
+        flash(
+            "Product cannot be permanently deleted because "
+            "it is associated with existing order history.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("admin.products")
+        )
+
+    # -----------------------------------------------------
+    # SAVE IMAGE KEYS BEFORE DATABASE DELETE
+    # -----------------------------------------------------
+    #
+    # product_images are removed automatically by the
+    # database because of ON DELETE CASCADE.
+    #
+    # We must therefore collect their physical image keys
+    # before deleting the product.
+    # -----------------------------------------------------
+
+    product_images = (
+        ProductImage.query
+        .filter_by(
+            product_id=product.id
+        )
+        .all()
+    )
+
+    image_keys = [
+        image.image_key
+        for image in product_images
+        if image.image_key
+    ]
+
+    # -----------------------------------------------------
+    # DELETE PRODUCT
+    # -----------------------------------------------------
+
+    try:
+
+        db.session.delete(product)
+        db.session.commit()
+
+    except Exception:
+
+        db.session.rollback()
+
+        flash(
+            "Product could not be deleted.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("admin.products")
+        )
+
+    # -----------------------------------------------------
+    # DELETE PHYSICAL IMAGE FILES
+    # -----------------------------------------------------
+    #
+    # Database deletion succeeded first.
+    # Only now remove the stored image files.
+    # -----------------------------------------------------
+
+    failed_image_deletes = []
+
+    storage = StorageService()
+
+    for image_key in image_keys:
+
+        try:
+
+            deleted = storage.delete(
+                image_key
+            )
+
+            if not deleted:
+
+                failed_image_deletes.append(
+                    image_key
+                )
+
+        except Exception:
+
+            failed_image_deletes.append(
+                image_key
+            )
+
+    # -----------------------------------------------------
+    # RESULT MESSAGE
+    # -----------------------------------------------------
+
+    if failed_image_deletes:
+
+        flash(
+            "Product was deleted successfully, but some "
+            "product image files could not be removed.",
+            "warning"
+        )
+
+    else:
+
+        flash(
+            "Product permanently deleted.",
+            "success"
+        )
+
+    return redirect(
+        url_for("admin.products")
+    )
+
+
+# =========================================================
+# USERS MANAGEMENT
+# =========================================================
+
+@admin_bp.route("/users")
+def users():
+
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    return render_template(
+        "admin/users.html"
     )

@@ -1,0 +1,552 @@
+{% extends "admin/base.html" %}
+
+{% if product %}
+    {% set page_title = "Edit Product" %}
+{% else %}
+    {% set page_title = "Add Product" %}
+{% endif %}
+
+{% block title %}
+{{ page_title }} | ShopEase Admin
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-9">
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+
+                <div>
+
+                    <h2 class="fw-bold mb-1">
+    {{ page_title }}
+</h2>
+
+                    <p class="text-muted mb-0">
+                        Product information
+                    </p>
+
+                </div>
+
+                <a
+                    href="{{ url_for('admin.products') }}"
+                    class="btn btn-outline-secondary"
+                >
+                    Back
+                </a>
+
+            </div>
+
+
+            <!-- Flash Messages -->
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+
+                {% if messages %}
+
+                    {% for category_message, message in messages %}
+
+                        <div class="alert alert-{{ category_message }}">
+                            {{ message }}
+                        </div>
+
+                    {% endfor %}
+
+                {% endif %}
+
+            {% endwith %}
+
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body p-4">
+
+                    <form
+    method="POST"
+    action="{% if product %}{{ url_for('admin.edit_product', product_id=product.id) }}{% else %}{{ url_for('admin.add_product') }}{% endif %}"
+>
+
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="{{ csrf_token() }}"
+                        >
+
+
+                        <!-- Product Name -->
+
+                        <div class="mb-4">
+
+                            <label
+                                for="name"
+                                class="form-label fw-semibold"
+                            >
+                                Product Name
+                            </label>
+
+                            <input
+    type="text"
+    class="form-control"
+    id="name"
+    name="name"
+    value="{% if product %}{{ product.name }}{% endif %}"
+    maxlength="200"
+    placeholder="Example: Apple iPhone 15"
+    required
+>
+
+                        </div>
+
+
+                        <!-- SKU -->
+
+                        <div class="mb-4">
+
+                            <label
+                                for="sku"
+                                class="form-label fw-semibold"
+                            >
+                                SKU
+                            </label>
+
+                            <input
+    type="text"
+    class="form-control"
+    id="sku"
+    name="sku"
+    value="{% if product %}{{ product.sku }}{% endif %}"
+    maxlength="50"
+    placeholder="Example: APP-IP15-128"
+    required
+>
+
+                            <div class="form-text">
+                                SKU must be unique for every product.
+                            </div>
+
+                        </div>
+
+
+                        <div class="row">
+
+
+                            <!-- Category -->
+
+                            <div class="col-md-4 mb-4">
+
+                                <label
+                                    for="category_id"
+                                    class="form-label fw-semibold"
+                                >
+                                    Category
+                                </label>
+
+                                <select
+                                    class="form-select"
+                                    id="category_id"
+                                    name="category_id"
+                                    required
+                                >
+
+                                    <option value="">
+                                        Select Category
+                                    </option>
+
+                                    {% for category in categories %}
+
+                                        <option
+    value="{{ category.id }}"
+    {% if product and product.category_id == category.id %}
+        selected
+    {% endif %}
+>
+    {{ category.name }}
+</option>
+
+                                    {% endfor %}
+
+                                </select>
+
+                            </div>
+
+
+                            <!-- Subcategory -->
+
+                            <div class="col-md-4 mb-4">
+
+                                <label
+                                    for="subcategory_id"
+                                    class="form-label fw-semibold"
+                                >
+                                    Subcategory
+                                </label>
+
+                                <select
+                                    class="form-select"
+                                    id="subcategory_id"
+                                    name="subcategory_id"
+                                >
+
+                                    <option value="">
+                                        Select Subcategory
+                                    </option>
+
+                                    {% for subcategory in subcategories %}
+
+                                        <option
+    value="{{ subcategory.id }}"
+    data-category="{{ subcategory.category_id }}"
+    {% if product and product.subcategory_id == subcategory.id %}
+        selected
+    {% endif %}
+>
+    {{ subcategory.name }}
+</option>
+
+                                    {% endfor %}
+
+                                </select>
+
+                                <div class="form-text">
+                                    Only subcategories belonging to the selected category are shown.
+                                </div>
+
+                            </div>
+
+
+                            <!-- Brand -->
+
+                            <div class="col-md-4 mb-4">
+
+                                <label
+                                    for="brand_id"
+                                    class="form-label fw-semibold"
+                                >
+                                    Brand
+                                </label>
+
+                                <select
+                                    class="form-select"
+                                    id="brand_id"
+                                    name="brand_id"
+                                >
+
+                                    <option value="">
+                                        Select Brand
+                                    </option>
+
+                                    {% for brand in brands %}
+
+                                        <option
+    value="{{ brand.id }}"
+    {% if product and product.brand_id == brand.id %}
+        selected
+    {% endif %}
+>
+    {{ brand.name }}
+</option>
+
+                                    {% endfor %}
+
+                                </select>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="row">
+
+
+                            <!-- Price -->
+
+                            <div class="col-md-6 mb-4">
+
+                                <label
+                                    for="price"
+                                    class="form-label fw-semibold"
+                                >
+                                    Price
+                                </label>
+
+                                <div class="input-group">
+
+                                    <span class="input-group-text">
+                                        ₹
+                                    </span>
+
+                                    <input
+                                        type="number"
+                                        class="form-control"
+                                        id="price"
+                                        name="price"
+                                        value="{% if product %}{{ product.price }}{% endif %}"
+                                        min="0.01"
+                                        step="0.01"
+                                        placeholder="0.00"
+                                        required
+                                    >
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- Stock -->
+
+                            <div class="col-md-6 mb-4">
+
+                                <label
+                                    for="stock_quantity"
+                                    class="form-label fw-semibold"
+                                >
+                                    Stock Quantity
+                                </label>
+
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    id="stock_quantity"
+                                    name="stock_quantity"
+                                    value="{% if product %}{{ product.stock_quantity }}{% else %}0{% endif %}"
+                                    min="0"
+                                    step="1"
+                                    value="0"
+                                    required
+                                >
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- Description -->
+
+                        <div class="mb-4">
+
+                            <label
+                                for="description"
+                                class="form-label fw-semibold"
+                            >
+                                Description
+                            </label>
+
+                            <textarea
+    class="form-control"
+    id="description"
+    name="description"
+    rows="5"
+    placeholder="Enter product description..."
+>{% if product and product.description %}{{ product.description }}{% endif %}</textarea>
+
+                        </div>
+
+
+                        <!-- Specifications -->
+
+                        <div class="mb-4">
+
+                            <label
+                                for="specifications"
+                                class="form-label fw-semibold"
+                            >
+                                Specifications
+                            </label>
+
+                            <textarea
+    class="form-control font-monospace"
+    id="specifications"
+    name="specifications"
+    rows="7"
+    placeholder='{
+  "color": "Black",
+  "storage": "128GB",
+  "ram": "8GB"
+}'>{% if product and product.specifications %}{{ product.specifications | tojson(indent=2) }}{% endif %}</textarea>
+
+                            <div class="form-text">
+                                Enter specifications as a valid JSON object.
+                            </div>
+
+                        </div>
+
+
+                        <!-- Featured -->
+
+                        <div class="form-check mb-3">
+
+                            <input
+    class="form-check-input"
+    type="checkbox"
+    id="featured"
+    name="featured"
+    value="1"
+    {% if product and product.featured %}
+        checked
+    {% endif %}
+>
+
+                            <label
+                                class="form-check-label"
+                                for="featured"
+                            >
+                                Featured Product
+                            </label>
+
+                        </div>
+
+
+                        <!-- Status -->
+
+                        <div class="form-check mb-4">
+
+                            <input
+    class="form-check-input"
+    type="checkbox"
+    id="is_active"
+    name="is_active"
+    value="1"
+    {% if not product or product.is_active %}
+        checked
+    {% endif %}
+>
+
+                            <label
+                                class="form-check-label"
+                                for="is_active"
+                            >
+                                Active Product
+                            </label>
+
+                        </div>
+
+
+                        <!-- Submit -->
+
+                        <button
+    type="submit"
+    class="btn btn-primary w-100"
+>
+    {% if product %}
+        Update Product
+    {% else %}
+        Create Product
+    {% endif %}
+</button>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+        const categorySelect =
+            document.getElementById("category_id");
+
+        const subcategorySelect =
+            document.getElementById("subcategory_id");
+
+        const allSubcategories =
+            Array.from(
+                subcategorySelect.options
+            ).slice(1);
+
+        const currentSubcategory =
+            "{{ product.subcategory_id if product and product.subcategory_id else '' }}";
+
+
+        function filterSubcategories(
+            selectedSubcategory = ""
+        ) {
+
+            const selectedCategory =
+                categorySelect.value;
+
+            subcategorySelect.innerHTML = "";
+
+            const defaultOption =
+                document.createElement("option");
+
+            defaultOption.value = "";
+            defaultOption.textContent =
+                "Select Subcategory";
+
+            subcategorySelect.appendChild(
+                defaultOption
+            );
+
+
+            if (!selectedCategory) {
+                return;
+            }
+
+
+            allSubcategories.forEach(
+                function (option) {
+
+                    if (
+                        option.dataset.category ===
+                        selectedCategory
+                    ) {
+
+                        const newOption =
+                            option.cloneNode(true);
+
+                        if (
+                            newOption.value ===
+                            selectedSubcategory
+                        ) {
+
+                            newOption.selected = true;
+
+                        }
+
+                        subcategorySelect.appendChild(
+                            newOption
+                        );
+
+                    }
+
+                }
+            );
+
+        }
+
+
+        categorySelect.addEventListener(
+            "change",
+            function () {
+
+                filterSubcategories("");
+
+            }
+        );
+
+
+        filterSubcategories(
+            currentSubcategory
+        );
+
+    }
+);
+
+</script>
+
+{% endblock %}

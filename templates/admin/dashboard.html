@@ -1,4 +1,5 @@
-{% extends "base.html" %}
+{% extends "admin/base.html" %}
+
 
 {% block title %}
 Admin Dashboard | ShopEase
@@ -8,6 +9,9 @@ Admin Dashboard | ShopEase
 {% block content %}
 
 <div class="container py-5">
+
+
+    <!-- Header -->
 
     <div class="mb-5">
 
@@ -24,6 +28,7 @@ Admin Dashboard | ShopEase
 
 
     <div class="row g-4">
+
 
         <!-- Categories -->
 
@@ -55,60 +60,65 @@ Admin Dashboard | ShopEase
         </div>
 
 
+        <!-- Subcategories -->
+
         <div class="col-md-6 col-lg-4">
 
-    <div class="card border-0 shadow-sm h-100">
+            <div class="card border-0 shadow-sm h-100">
 
-        <div class="card-body">
+                <div class="card-body">
 
-            <h5 class="fw-bold">
-                Subcategories
-            </h5>
+                    <h5 class="fw-bold">
+                        Subcategories
+                    </h5>
 
-            <p class="text-muted">
-                Manage product subcategories.
-            </p>
+                    <p class="text-muted">
+                        Manage product subcategories.
+                    </p>
 
-            <a
-                href="{{ url_for('admin.subcategories') }}"
-                class="btn btn-primary"
-            >
-                Manage Subcategories
-            </a>
+                    <a
+                        href="{{ url_for('admin.subcategories') }}"
+                        class="btn btn-primary"
+                    >
+                        Manage Subcategories
+                    </a>
 
-        </div>
+                </div>
 
-    </div>
-
-</div>
-
-
-<div class="col-md-6 col-lg-4">
-
-    <div class="card border-0 shadow-sm h-100">
-
-        <div class="card-body">
-
-            <h5 class="fw-bold">
-                Brands
-            </h5>
-
-            <p class="text-muted">
-                Manage product brands.
-            </p>
-
-            <a
-                href="{{ url_for('admin.brands') }}"
-                class="btn btn-primary"
-            >
-                Manage Brands
-            </a>
+            </div>
 
         </div>
 
-    </div>
 
-</div>
+        <!-- Brands -->
+
+        <div class="col-md-6 col-lg-4">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <h5 class="fw-bold">
+                        Brands
+                    </h5>
+
+                    <p class="text-muted">
+                        Manage product brands.
+                    </p>
+
+                    <a
+                        href="{{ url_for('admin.brands') }}"
+                        class="btn btn-primary"
+                    >
+                        Manage Brands
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
 
         <!-- Products -->
 
@@ -123,15 +133,45 @@ Admin Dashboard | ShopEase
                     </h5>
 
                     <p class="text-muted">
-                        Product management will be added next.
+                        Manage products, pricing, stock and images.
                     </p>
 
-                    <button
-                        class="btn btn-outline-secondary"
-                        disabled
+                    <a
+                        href="{{ url_for('admin.products') }}"
+                        class="btn btn-primary"
                     >
-                        Coming Next
-                    </button>
+                        Manage Products
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- Users -->
+
+        <div class="col-md-6 col-lg-4">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <h5 class="fw-bold">
+                        Users
+                    </h5>
+
+                    <p class="text-muted">
+                        View and manage registered customers.
+                    </p>
+
+                    <a
+                        href="{{ url_for('admin.users') }}"
+                        class="btn btn-primary"
+                    >
+                        Manage Users
+                    </a>
 
                 </div>
 
@@ -169,10 +209,9 @@ Admin Dashboard | ShopEase
 
         </div>
 
+
     </div>
 
 </div>
 
 {% endblock %}
-
-

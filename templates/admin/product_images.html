@@ -1,0 +1,299 @@
+{% extends "admin/base.html" %}
+
+{% block title %}
+Product Images | ShopEase Admin
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <!-- Header -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+
+            <h2 class="fw-bold mb-1">
+                Product Images
+            </h2>
+
+            <p class="text-muted mb-0">
+                {{ product.name }}
+            </p>
+
+        </div>
+
+        <a
+            href="{{ url_for('admin.products') }}"
+            class="btn btn-outline-secondary"
+        >
+            Back to Products
+        </a>
+
+    </div>
+
+
+    <!-- Flash Messages -->
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+
+        {% if messages %}
+
+            {% for category, message in messages %}
+
+                <div class="alert alert-{{ category }}">
+                    {{ message }}
+                </div>
+
+            {% endfor %}
+
+        {% endif %}
+
+    {% endwith %}
+
+
+    <!-- Upload -->
+
+    <div class="card border-0 shadow-sm mb-4">
+
+        <div class="card-body p-4">
+
+            <h5 class="fw-bold mb-3">
+                Upload Product Images
+            </h5>
+
+            <form
+                method="POST"
+                enctype="multipart/form-data"
+            >
+
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                >
+
+                <div class="mb-3">
+
+                    <label
+                        for="images"
+                        class="form-label fw-semibold"
+                    >
+                        Select Images
+                    </label>
+
+                    <input
+                        type="file"
+                        class="form-control"
+                        id="images"
+                        name="images"
+                        accept=".jpg,.jpeg,.png,.webp"
+                        multiple
+                        required
+                    >
+
+                    <div class="form-text">
+                        You can select multiple JPG, JPEG, PNG or WebP images.
+                    </div>
+
+                </div>
+
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                >
+                    Upload Images
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+    <!-- Existing Images -->
+
+    <div class="card border-0 shadow-sm">
+
+        <div class="card-body p-4">
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+
+                <div>
+
+                    <h5 class="fw-bold mb-1">
+                        Product Images
+                    </h5>
+
+                    <p class="text-muted mb-0">
+                        {{ images|length }} image(s)
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            {% if images %}
+
+                <form
+                    method="POST"
+                    action="{{ url_for(
+                        'admin.update_product_image_order',
+                        product_id=product.id
+                    ) }}"
+                >
+
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="{{ csrf_token() }}"
+                    >
+
+
+                    <div class="row g-4">
+
+                        {% for image in images %}
+
+                            <div class="col-sm-6 col-md-4 col-lg-3">
+
+                                <div class="card h-100">
+
+                                    <img
+                                        src="{{ url_for(
+                                            'admin.product_image_view',
+                                            product_id=product.id,
+                                            image_id=image.id
+                                        ) }}"
+                                        alt="{{ image.alt_text or product.name }}"
+                                        class="card-img-top"
+                                        style="
+                                            height: 220px;
+                                            object-fit: cover;
+                                        "
+                                    >
+
+
+                                    <div class="card-body">
+
+                                        <p class="small text-muted mb-2">
+                                            Image #{{ image.id }}
+                                        </p>
+
+
+                                        {% if image.is_primary %}
+
+                                            <span class="badge bg-primary mb-3">
+                                                Primary Image
+                                            </span>
+
+                                        {% else %}
+
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm btn-outline-primary mb-3"
+                                                formaction="{{ url_for(
+                                                    'admin.set_primary_product_image',
+                                                    product_id=product.id,
+                                                    image_id=image.id
+                                                ) }}"
+                                            >
+                                                Set Primary
+                                            </button>
+
+                                        {% endif %}
+
+
+                                        <!-- Display Order -->
+
+                                        <div class="mb-3">
+
+                                            <label
+                                                for="display_order_{{ image.id }}"
+                                                class="form-label small fw-semibold"
+                                            >
+                                                Display Order
+                                            </label>
+
+                                            <input
+                                                type="number"
+                                                class="form-control form-control-sm"
+                                                id="display_order_{{ image.id }}"
+                                                name="display_order_{{ image.id }}"
+                                                value="{{ image.display_order }}"
+                                                min="0"
+                                                step="1"
+                                            >
+
+                                        </div>
+
+
+                                        <!-- Delete -->
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-sm btn-outline-danger w-100"
+                                            formaction="{{ url_for(
+                                                'admin.delete_product_image',
+                                                product_id=product.id,
+                                                image_id=image.id
+                                            ) }}"
+                                            formmethod="POST"
+                                            onclick="return confirm(
+                                                'Are you sure you want to permanently delete this product image?'
+                                            );"
+                                        >
+                                            Delete Image
+                                        </button>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+
+                    <!-- Save Order -->
+
+                    <div class="mt-4">
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary"
+                        >
+                            Save Display Order
+                        </button>
+
+                    </div>
+
+                </form>
+
+            {% else %}
+
+                <div class="text-center py-5">
+
+                    <h5>
+                        No product images yet
+                    </h5>
+
+                    <p class="text-muted mb-0">
+                        Upload images for this product.
+                    </p>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

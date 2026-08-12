@@ -504,3 +504,27 @@ CREATE TABLE activity_logs (
     INDEX idx_activity_logs_action (action),
     INDEX idx_activity_logs_created (created_at)
 );
+
+CREATE TABLE product_sizes (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    product_id BIGINT UNSIGNED NOT NULL,
+
+    size VARCHAR(50) NOT NULL,
+
+    quantity INT UNSIGNED NOT NULL DEFAULT 0,
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_product_sizes_product
+        FOREIGN KEY (product_id)
+        REFERENCES products(id)
+        ON DELETE CASCADE,
+
+    UNIQUE KEY uq_product_size (product_id, size),
+
+    INDEX idx_product_sizes_product (product_id)
+);

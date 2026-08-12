@@ -1191,3 +1191,65 @@ def add_to_cart():
             slug=product.slug
         )
     )
+
+# =========================================================
+# CART PAGE
+# =========================================================
+
+@main_bp.route("/cart")
+def cart():
+
+    # -----------------------------------------------------
+    # LOGIN REQUIRED
+    # -----------------------------------------------------
+
+    user_id = session.get("user_id")
+
+    if not user_id:
+        return redirect(
+            url_for("auth.login")
+        )
+
+    # -----------------------------------------------------
+    # GET CART ITEMS
+    # -----------------------------------------------------
+
+    cart_items = (
+        CartItem.query
+        .filter_by(
+            user_id=user_id
+        )
+        .order_by(
+            CartItem.created_at.desc()
+        )
+        .all()
+    )
+
+    # -----------------------------------------------------
+    # CALCULATE TOTAL
+    # -----------------------------------------------------
+
+    cart_total = 0
+
+    for item in cart_items:
+
+        if item.product_size:
+            item_price = item.product_size.price
+        else:
+            item_price = item.product.price
+
+        item.subtotal = (
+            item_price * item.quantity
+        )
+
+        cart_total += item.subtotal
+
+    # -----------------------------------------------------
+    # RENDER CART
+    # -----------------------------------------------------
+
+    return render_template(
+        "cart.html",
+        cart_items=cart_items,
+        cart_total=cart_total
+    )

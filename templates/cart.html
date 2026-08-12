@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="fw-bold mb-1">Shopping Cart</h1>
+            <p class="text-muted mb-0">
+                Review your selected products before checkout.
+            </p>
+        </div>
+
+        <a href="{{ url_for('main.products') }}"
+           class="btn btn-outline-primary">
+            Continue Shopping
+        </a>
+    </div>
+
+
+    {% if cart_items %}
+
+    <div class="row g-4">
+
+        <!-- CART ITEMS -->
+        <div class="col-lg-8">
+
+            {% for item in cart_items %}
+
+            <div class="card border-0 shadow-sm mb-3">
+
+                <div class="card-body">
+
+                    <div class="row align-items-center g-3">
+
+                        <!-- IMAGE -->
+                        <div class="col-3 col-md-2">
+
+                            {% if item.product.images %}
+
+                                <img
+                                    src="{{ url_for(
+                                        'main.product_image',
+                                        image_id=item.product.images[0].id
+                                    ) }}"
+                                    class="img-fluid rounded"
+                                    alt="{{ item.product.name }}"
+                                    style="
+                                        width: 100%;
+                                        height: 100px;
+                                        object-fit: contain;
+                                    "
+                                >
+
+                            {% else %}
+
+                                <div
+                                    class="bg-light rounded d-flex
+                                           align-items-center
+                                           justify-content-center"
+                                    style="height:100px;"
+                                >
+                                    No Image
+                                </div>
+
+                            {% endif %}
+
+                        </div>
+
+
+                        <!-- PRODUCT DETAILS -->
+                        <div class="col-9 col-md-5">
+
+                            <h5 class="fw-semibold mb-1">
+                                {{ item.product.name }}
+                            </h5>
+
+                            {% if item.product_size %}
+
+                            <div class="text-muted small mb-1">
+                                Size / Variant:
+                                <strong>
+                                    {{ item.product_size.size }}
+                                </strong>
+                            </div>
+
+                            {% endif %}
+
+                            <div class="text-muted small">
+                                Price:
+                                ₹{{ "%.2f"|format(
+                                    item.product_size.price
+                                    if item.product_size
+                                    else item.product.price
+                                ) }}
+                            </div>
+
+                        </div>
+
+
+                        <!-- QUANTITY -->
+                        <div class="col-5 col-md-2">
+
+                            <label class="small text-muted d-block mb-1">
+                                Quantity
+                            </label>
+
+                            <div class="border rounded px-3 py-2 text-center">
+                                {{ item.quantity }}
+                            </div>
+
+                        </div>
+
+
+                        <!-- SUBTOTAL -->
+                        <div class="col-5 col-md-2 text-md-end">
+
+                            <div class="small text-muted mb-1">
+                                Subtotal
+                            </div>
+
+                            <strong>
+                                ₹{{ "%.2f"|format(item.subtotal) }}
+                            </strong>
+
+                        </div>
+
+
+                        <!-- REMOVE -->
+                        <div class="col-2 col-md-1 text-end">
+
+                            <button
+                                type="button"
+                                class="btn btn-outline-danger btn-sm"
+                                disabled
+                                title="Remove will be added next"
+                            >
+                                ×
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+
+        <!-- CART SUMMARY -->
+        <div class="col-lg-4">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body p-4">
+
+                    <h4 class="fw-bold mb-4">
+                        Order Summary
+                    </h4>
+
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-muted">
+                            Items
+                        </span>
+
+                        <span>
+                            {{ cart_items|length }}
+                        </span>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between mb-4">
+
+                        <strong>
+                            Total
+                        </strong>
+
+                        <strong class="fs-5">
+                            ₹{{ "%.2f"|format(cart_total) }}
+                        </strong>
+
+                    </div>
+
+                    <button
+                        type="button"
+                        class="btn btn-primary w-100 py-2"
+                        disabled
+                    >
+                        Proceed to Checkout
+                    </button>
+
+                    <p class="text-muted small text-center mt-3 mb-0">
+                        Checkout will be added later.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    {% else %}
+
+    <!-- EMPTY CART -->
+
+    <div class="card border-0 shadow-sm">
+
+        <div class="card-body text-center py-5">
+
+            <div class="fs-1 mb-3">
+                🛒
+            </div>
+
+            <h3 class="fw-bold">
+                Your cart is empty
+            </h3>
+
+            <p class="text-muted mb-4">
+                You haven't added any products to your cart yet.
+            </p>
+
+            <a
+                href="{{ url_for('main.products') }}"
+                class="btn btn-primary px-4"
+            >
+                Start Shopping
+            </a>
+
+        </div>
+
+    </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

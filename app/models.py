@@ -429,6 +429,11 @@ class ProductSize(db.Model):
         nullable=False
     )
 
+    price = db.Column(
+        db.Numeric(12, 2),
+        nullable=False
+    )
+
     quantity = db.Column(
         db.Integer,
         nullable=False,
@@ -504,4 +509,68 @@ class ProductImage(db.Model):
     product = db.relationship(
         "Product",
         back_populates="images"
+    )
+
+# =========================================================
+# HOMEPAGE BANNER
+# =========================================================
+
+class Banner(db.Model):
+
+    __tablename__ = "banners"
+
+    id = db.Column(
+        db.BigInteger,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    title = db.Column(
+        db.String(200),
+        nullable=True
+    )
+
+    description = db.Column(
+        db.String(500),
+        nullable=True
+    )
+
+    image_key = db.Column(
+        db.String(500),
+        nullable=False
+    )
+
+    button_text = db.Column(
+        db.String(100),
+        nullable=True
+    )
+
+    button_link = db.Column(
+        db.String(500),
+        nullable=True
+    )
+
+    display_order = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    is_active = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp()
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+        onupdate=db.func.current_timestamp()
     )

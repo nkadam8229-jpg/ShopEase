@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+ShopEase | Products
+{% endblock %}
+
+
+{% block content %}
+
+<section class="py-5">
+
+    <div class="container">
+
+        <!-- =================================================
+             PAGE HEADING
+        ================================================== -->
+
+        <div class="mb-4">
+
+            {% if category %}
+
+                <h1 class="fw-bold">
+                    {{ category.name }}
+                </h1>
+
+                <p class="text-muted mb-0">
+                    Explore products in {{ category.name }}.
+                </p>
+
+            {% else %}
+
+                <h1 class="fw-bold">
+                    All Products
+                </h1>
+
+                <p class="text-muted mb-0">
+                    Browse our available products.
+                </p>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- =================================================
+             SUBCATEGORY CARDS
+        ================================================== -->
+
+        {% if subcategories %}
+
+            <div class="mb-5">
+
+                <h4 class="fw-semibold mb-3">
+                    Shop by Subcategory
+                </h4>
+
+
+                <div class="subcategory-grid">
+
+                    <!-- ALL PRODUCTS -->
+
+                    {% if category %}
+
+                        <div class="subcategory-grid-item">
+
+                            <a
+                                href="{{ url_for(
+                                    'main.products',
+                                    category=category.slug
+                                ) }}"
+                                class="text-decoration-none"
+                            >
+
+                                <div
+                                    class="subcategory-card
+                                    {% if not selected_subcategory %}
+                                        active
+                                    {% endif %}"
+                                >
+
+                                    <div
+                                        class="subcategory-image-wrapper
+                                        subcategory-no-image"
+                                    >
+                                        <span>
+                                            All
+                                        </span>
+                                    </div>
+
+                                    <div class="subcategory-card-body">
+
+                                        <h6>
+                                            All Products
+                                        </h6>
+
+                                    </div>
+
+                                </div>
+
+                            </a>
+
+                        </div>
+
+                    {% endif %}
+
+
+                    {% for subcategory in subcategories %}
+
+                        <div class="subcategory-grid-item">
+
+                            <a
+                                href="{{ url_for(
+                                    'main.products',
+                                    category=category.slug,
+                                    subcategory=subcategory.slug
+                                ) }}"
+                                class="text-decoration-none"
+                            >
+
+                                <div
+                                    class="subcategory-card
+                                    {% if selected_subcategory
+                                        and selected_subcategory.id
+                                        == subcategory.id %}
+                                        active
+                                    {% endif %}"
+                                >
+
+                                    <div
+                                        class="subcategory-image-wrapper"
+                                    >
+
+                                        {% if subcategory.image_key %}
+
+                                            <img
+                                                src="{{ url_for(
+                                                    'main.subcategory_image',
+                                                    subcategory_id=subcategory.id
+                                                ) }}"
+                                                alt="{{ subcategory.name }}"
+                                                class="subcategory-image"
+                                            >
+
+                                        {% else %}
+
+                                            <div
+                                                class="subcategory-image-placeholder"
+                                            >
+                                                {{ subcategory.name[0] }}
+                                            </div>
+
+                                        {% endif %}
+
+                                    </div>
+
+
+                                    <div
+                                        class="subcategory-card-body"
+                                    >
+
+                                        <h6>
+                                            {{ subcategory.name }}
+                                        </h6>
+
+                                    </div>
+
+                                </div>
+
+                            </a>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+        {% endif %}
+
+
+        <!-- =================================================
+             ACTIVE FILTER
+        ================================================== -->
+
+        {% if selected_subcategory %}
+
+            <div class="active-filter mb-4">
+
+                <span>
+                    Showing:
+                    <strong>
+                        {{ selected_subcategory.name }}
+                    </strong>
+                </span>
+
+            </div>
+
+        {% endif %}
+
+
+        <!-- =================================================
+             PRODUCTS
+        ================================================== -->
+
+        {% if products %}
+
+            <div class="row g-4">
+
+                {% for product in products %}
+
+                    <div class="col-6 col-md-4 col-lg-3">
+
+                        <a
+                            href="/products/{{ product.slug }}"
+                            class="text-decoration-none"
+                        >
+
+                            <div class="product-card">
+
+                                <!-- Product Image -->
+
+                                <div class="product-image-wrapper">
+
+                                    {% if product.images %}
+
+                                        <img
+                                            src="{{ url_for(
+                                                'main.product_image',
+                                                image_id=product.images[0].id
+                                            ) }}"
+                                            alt="{{ product.name }}"
+                                            class="product-image"
+                                        >
+
+                                    {% else %}
+
+                                        <div
+                                            class="product-image-placeholder"
+                                        >
+                                            No Image
+                                        </div>
+
+                                    {% endif %}
+
+                                </div>
+
+
+                                <!-- Product Information -->
+
+                                <div class="product-card-body">
+
+                                    {% if product.brand %}
+
+                                        <small class="text-muted">
+                                            {{ product.brand.name }}
+                                        </small>
+
+                                    {% endif %}
+
+
+                                    <h5 class="product-name">
+                                        {{ product.name }}
+                                    </h5>
+
+
+                                    <div class="product-price">
+
+                                        ₹{{ "%.2f"|format(
+                                            product.price
+                                        ) }}
+
+                                    </div>
+
+
+                                    {% if product.stock_quantity > 0 %}
+
+                                        <small class="text-success">
+                                            In Stock
+                                        </small>
+
+                                    {% else %}
+
+                                        <small class="text-danger">
+                                            Out of Stock
+                                        </small>
+
+                                    {% endif %}
+
+                                </div>
+
+                            </div>
+
+                        </a>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-products text-center py-5">
+
+                <h4>
+                    No products found
+                </h4>
+
+                <p class="text-muted mb-0">
+                    There are no products available for
+                    this selection.
+                </p>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</section>
+
+{% endblock %}

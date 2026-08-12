@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+ShopEase | Categories
+{% endblock %}
+
+
+{% block content %}
+
+<section class="py-5">
+
+    <div class="container">
+
+        <!-- Page Heading -->
+
+        <div class="text-center mb-5">
+
+            <h1 class="fw-bold">
+                Shop by Category
+            </h1>
+
+            <p class="text-muted mb-0">
+                Explore our product categories.
+            </p>
+
+        </div>
+
+
+        {% if categories %}
+
+            <div class="category-grid">
+
+                {% for category in categories %}
+
+                    <div class="category-grid-item">
+
+                        <a
+                            href="/products?category={{ category.slug }}"
+                            class="text-decoration-none"
+                        >
+
+                            <div class="category-card">
+
+                                <div class="category-image-wrapper">
+
+                                    {% if category.image_key %}
+
+                                        <img
+                                            src="{{ url_for(
+                                                'main.category_image',
+                                                category_id=category.id
+                                            ) }}"
+                                            alt="{{ category.name }}"
+                                            class="category-image"
+                                        >
+
+                                    {% else %}
+
+                                        <div class="category-image-placeholder">
+
+                                            <span>
+                                                {{ category.name[0] }}
+                                            </span>
+
+                                        </div>
+
+                                    {% endif %}
+
+                                </div>
+
+
+                                <div class="category-card-body">
+
+                                    <h5 class="mb-1">
+                                        {{ category.name }}
+                                    </h5>
+
+                                    <span class="category-card-link">
+                                        Explore Products →
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                        </a>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-products text-center">
+
+                <h5>
+                    Categories coming soon
+                </h5>
+
+                <p class="text-muted mb-0">
+                    Our categories will appear here.
+                </p>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</section>
+
+{% endblock %}

@@ -1,45 +1,84 @@
 {% extends "base.html" %}
 
+
 {% block title %}
-Home | ShopEase
+ShopEase | Home
 {% endblock %}
 
 
 {% block content %}
 
-<!-- =========================
-     HERO SECTION
-========================== -->
+<!-- =====================================================
+     HOMEPAGE BANNER
+====================================================== -->
 
-<section class="hero-section">
+<section class="home-banner">
 
-    <div class="container">
+    <div class="container-fluid px-0">
 
-        <div class="row align-items-center min-vh-75">
+        <div class="banner-wrapper">
 
-            <div class="col-lg-7">
+            {% if banner %}
 
-                <span class="badge bg-primary mb-3">
-                    Welcome to ShopEase
-                </span>
+                <img
+                    src="{{ url_for('main.banner_image', banner_id=banner.id) }}"
+                    class="home-banner-image"
+                    alt="{{ banner.title or 'ShopEase promotional banner' }}"
+                >
 
-                <h1 class="display-4 fw-bold mb-3">
-                    Shop Smart.
-                    <span class="text-primary">
-                        Live Better.
-                    </span>
-                </h1>
+                <div class="banner-overlay">
 
-                <p class="lead text-muted mb-4">
-                    Discover quality products, great prices,
-                    and a seamless shopping experience.
-                </p>
+                    <div class="container">
 
-                <a href="#" class="btn btn-primary btn-lg px-4">
-                    Start Shopping
-                </a>
+                        <div class="banner-content">
 
-            </div>
+                            {% if banner.title %}
+
+                                <h1 class="display-4 fw-bold">
+                                    {{ banner.title }}
+                                </h1>
+
+                            {% endif %}
+
+
+                            {% if banner.description %}
+
+                                <p class="lead mb-4">
+                                    {{ banner.description }}
+                                </p>
+
+                            {% endif %}
+
+
+                            {% if banner.button_text %}
+
+                                <a
+                                    href="{{ banner.button_link or '#' }}"
+                                    class="btn btn-light btn-lg px-4"
+                                >
+                                    {{ banner.button_text }}
+                                </a>
+
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            {% else %}
+
+                <img
+                    src="{{ url_for(
+                        'static',
+                        filename='images/default-banner.svg'
+                    ) }}"
+                    class="home-banner-image"
+                    alt="ShopEase"
+                >
+
+            {% endif %}
 
         </div>
 
@@ -48,123 +87,114 @@ Home | ShopEase
 </section>
 
 
-<!-- =========================
-     FEATURED CATEGORIES
-========================== -->
+<!-- =====================================================
+     SHOP BY CATEGORY
+====================================================== -->
 
 <section class="py-5">
 
     <div class="container">
 
-        <div class="text-center mb-5">
+        <div class="section-heading text-center mb-5">
 
             <h2 class="fw-bold">
-                Featured Categories
+                Shop by Category
             </h2>
 
-            <p class="text-muted">
-                Explore products from our popular categories.
+            <p class="text-muted mb-0">
+                Explore products from our categories.
             </p>
 
         </div>
 
 
-        <div class="row g-4">
+        {% if categories %}
 
-            <div class="col-6 col-md-4 col-lg">
+            <div class="category-grid">
 
-                <div class="category-card">
+    {% for category in categories %}
 
-                    <div class="category-icon">
-                        📱
+        <div class="category-grid-item">
+
+                        <a
+                            href="/products?category={{ category.slug }}"
+                            class="text-decoration-none"
+                        >
+
+                            <div class="category-card">
+
+                                <div class="category-image-wrapper">
+
+                                    {% if category.image_key %}
+
+                                        <img
+                                            src="{{ url_for(
+                                                'main.category_image',
+                                                category_id=category.id
+                                            ) }}"
+                                            alt="{{ category.name }}"
+                                            class="category-image"
+                                        >
+
+                                    {% else %}
+
+                                        <div class="category-image-placeholder">
+                                            <span>
+                                                {{ category.name[0] }}
+                                            </span>
+                                        </div>
+
+                                    {% endif %}
+
+                                </div>
+
+
+                                <div class="category-card-body">
+
+                                    <h5 class="mb-1">
+                                        {{ category.name }}
+                                    </h5>
+
+                                    <span class="category-card-link">
+                                        Explore Products →
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                        </a>
+
                     </div>
 
-                    <h5>
-                        Electronics
-                    </h5>
-
-                </div>
+                {% endfor %}
 
             </div>
 
+        {% else %}
 
-            <div class="col-6 col-md-4 col-lg">
+            <div class="empty-products">
 
-                <div class="category-card">
+                <h5>
+                    Categories coming soon
+                </h5>
 
-                    <div class="category-icon">
-                        👕
-                    </div>
-
-                    <h5>
-                        Fashion
-                    </h5>
-
-                </div>
+                <p class="text-muted mb-0">
+                    Our categories will appear here.
+                </p>
 
             </div>
 
-
-            <div class="col-6 col-md-4 col-lg">
-
-                <div class="category-card">
-
-                    <div class="category-icon">
-                        🏠
-                    </div>
-
-                    <h5>
-                        Home & Kitchen
-                    </h5>
-
-                </div>
-
-            </div>
-
-
-            <div class="col-6 col-md-4 col-lg">
-
-                <div class="category-card">
-
-                    <div class="category-icon">
-                        📚
-                    </div>
-
-                    <h5>
-                        Books
-                    </h5>
-
-                </div>
-
-            </div>
-
-
-            <div class="col-6 col-md-4 col-lg">
-
-                <div class="category-card">
-
-                    <div class="category-icon">
-                        ⚽
-                    </div>
-
-                    <h5>
-                        Sports
-                    </h5>
-
-                </div>
-
-            </div>
-
-        </div>
+        {% endif %}
 
     </div>
 
 </section>
 
 
-<!-- =========================
+<!-- =====================================================
      FEATURED PRODUCTS
-========================== -->
+====================================================== -->
 
 <section class="py-5 bg-light">
 
@@ -179,46 +209,120 @@ Home | ShopEase
                 </h2>
 
                 <p class="text-muted mb-0">
-                    Discover products picked for you.
+                    Discover products selected by ShopEase.
                 </p>
 
             </div>
 
-            <a href="#" class="btn btn-outline-primary">
+
+            <a
+                href="/products"
+                class="btn btn-outline-primary"
+            >
                 View All
             </a>
 
         </div>
 
 
-        <div class="row">
+        {% if featured_products %}
 
-            <div class="col-12">
+            <div class="row g-4">
 
-                <div class="empty-products">
+                {% for product in featured_products %}
 
-                    <h5>
-                        Products coming soon
-                    </h5>
+                    <div class="col-6 col-md-4 col-lg-3">
 
-                    <p class="text-muted mb-0">
-                        Our product catalog will appear here.
-                    </p>
+                        <a
+                            href="/products/{{ product.slug }}"
+                            class="text-decoration-none"
+                        >
 
-                </div>
+                            <div class="product-card">
+
+                                <div class="product-image-wrapper">
+
+                                    {% if product.images %}
+
+                                        <img
+                                            src="{{ url_for(
+                                                'main.product_image',
+                                                image_id=product.images[0].id
+                                            ) }}"
+                                            alt="{{ product.name }}"
+                                            class="product-image"
+                                        >
+
+                                    {% else %}
+
+                                        <div class="product-image-placeholder">
+                                            No Image
+                                        </div>
+
+                                    {% endif %}
+
+                                </div>
+
+
+                                <div class="product-card-body">
+
+                                    {% if product.brand %}
+
+                                        <small class="text-muted">
+                                            {{ product.brand.name }}
+                                        </small>
+
+                                    {% endif %}
+
+
+                                    <h5 class="product-name">
+                                        {{ product.name }}
+                                    </h5>
+
+
+                                    <div class="product-price">
+
+                                        ₹{{ "%.2f"|format(product.price) }}
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </a>
+
+                    </div>
+
+                {% endfor %}
 
             </div>
 
-        </div>
+        {% else %}
+
+            <div class="empty-products">
+
+                <h5>
+                    Featured products coming soon
+                </h5>
+
+                <p class="text-muted mb-0">
+                    Products marked as featured by the admin
+                    will appear here.
+                </p>
+
+            </div>
+
+        {% endif %}
 
     </div>
 
 </section>
 
 
-<!-- =========================
+<!-- =====================================================
      WHY SHOPEASE
-========================== -->
+====================================================== -->
 
 <section class="py-5">
 

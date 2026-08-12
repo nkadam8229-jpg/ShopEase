@@ -1,0 +1,46 @@
+<svg width="1600" height="500" viewBox="0 0 1600 500" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <!-- Blue to Indigo Gradient Background -->
+        <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#1e40af"></stop>
+            <stop offset="50%" stop-color="#1d4ed8"></stop>
+            <stop offset="100%" stop-color="#3730a3"></stop>
+        </linearGradient>
+        
+        <!-- Subtle Glow Filter -->
+        <radialGradient id="glow" cx="80%" cy="30%" r="65%">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.15"></stop>
+            <stop offset="100%" stop-color="#ffffff" stop-opacity="0"></stop>
+        </radialGradient>
+    </defs>
+
+    <!-- Background Layers -->
+    <rect width="1600" height="500" fill="url(#bgGradient)"></rect>
+    <rect width="1600" height="500" fill="url(#glow)"></rect>
+
+    <!-- Minimal Geometric Design Elements -->
+    <circle cx="1350" cy="110" r="220" fill="#ffffff" opacity="0.05"></circle>
+    <circle cx="1500" cy="390" r="300" fill="#ffffff" opacity="0.04"></circle>
+
+    <!-- Non-clickable Visual Badge/Label -->
+    <rect x="120" y="105" width="180" height="32" rx="16" fill="#ffffff" fill-opacity="0.12" stroke="#ffffff" stroke-opacity="0.25" stroke-width="1"></rect>
+    <text x="210" y="126" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="600" fill="#e0e7ff" letter-spacing="0.5">
+        Browse Our Collection
+    </text>
+
+    <!-- Brand / Logo Header -->
+    <text x="120" y="195" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800" fill="#ffffff" letter-spacing="0.5">
+        ShopEase
+    </text>
+
+    <!-- Main Tagline -->
+    <text x="120" y="275" font-family="Arial, Helvetica, sans-serif" font-size="58" font-weight="700" fill="#ffffff" letter-spacing="-0.5">
+        Explore. Choose. Shop.
+    </text>
+
+    <!-- Supporting Line -->
+    <text x="120" y="330" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="400" fill="#c7d2fe" opacity="0.95">
+        Discover products across ShopEase
+    </text>
+</svg>
+

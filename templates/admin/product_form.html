@@ -283,7 +283,7 @@
 
                             <!-- Price -->
 
-                            <div class="col-md-6 mb-4">
+                            <div class="col-md-12 mb-4">
 
                                 <label
                                     for="price"
@@ -385,31 +385,37 @@
 
         <div class="table-responsive border rounded">
 
-            <table class="table table-bordered mb-0">
+            <div class="table-responsive">
+    <table class="table table-bordered mb-0">
 
                 <thead class="table-light">
 
-                    <tr>
+    <tr>
 
-                        <th>
-                            Size / Variant
-                        </th>
+        <th style="width: 45%;">
+            Size / Variant
+        </th>
 
-                        <th>
-                            Quantity
-                        </th>
+        <th style="width: 45%;">
+            Price
+        </th>
 
-                        <th style="width: 70px;">
-                        </th>
+        <th style="width: 18%;">
+            Quantity
+        </th>
 
-                    </tr>
+        <th style="width: 7px;">
+        </th>
 
-                </thead>
+    </tr>
+
+</thead>
 
                 <tbody id="sizeInventoryBody">
                 </tbody>
 
             </table>
+            </div>
 
         </div>
 
@@ -1438,142 +1444,241 @@ document.addEventListener(
         }
 
 
-        function addSizeRow(
-            size = "",
-            quantity = 0
-        ) {
+    function addSizeRow(
+    size = "",
+    price = "",
+    quantity = 0,
+    priceReadOnly = false
+) {
 
-            const row =
-                document.createElement("tr");
-
-
-            const sizeCell =
-                document.createElement("td");
-
-            const quantityCell =
-                document.createElement("td");
-
-            const actionCell =
-                document.createElement("td");
+    const row =
+        document.createElement("tr");
 
 
-            const sizeInput =
-                document.createElement("input");
+    /* -----------------------------------------
+       SIZE / VARIANT CELL
+    ----------------------------------------- */
 
-            sizeInput.type =
-                "text";
-
-            sizeInput.className =
-                "form-control";
-
-            sizeInput.name =
-                "size_name[]";
-
-            sizeInput.placeholder =
-                "Example: S, M, L or UK 8";
-
-            sizeInput.value =
-                size;
+    const sizeCell =
+        document.createElement("td");
 
 
-            const quantityInput =
-                document.createElement("input");
+    const sizeInput =
+        document.createElement("input");
 
-            quantityInput.type =
-                "number";
+    sizeInput.type =
+        "text";
 
-            quantityInput.className =
-                "form-control size-quantity";
+    sizeInput.className =
+        "form-control";
 
-            quantityInput.name =
-                "size_quantity[]";
+    sizeInput.name =
+        "size_name[]";
 
-            quantityInput.min =
-                "0";
+    sizeInput.placeholder =
+        "Example: S, M, L or UK 8";
 
-            quantityInput.step =
-                "1";
-
-            quantityInput.value =
-                quantity;
+    sizeInput.value =
+        size;
 
 
-            const removeButton =
-                document.createElement("button");
+    /* -----------------------------------------
+       PRICE CELL
+    ----------------------------------------- */
 
-            removeButton.type =
-                "button";
-
-            removeButton.className =
-                "btn btn-outline-danger btn-sm";
-
-            removeButton.textContent =
-                "×";
-
-            removeButton.title =
-                "Remove size";
+    const priceCell =
+        document.createElement("td");
 
 
-            sizeCell.appendChild(
-                sizeInput
-            );
+    const priceWrapper =
+        document.createElement("div");
 
-            quantityCell.appendChild(
-                quantityInput
-            );
-
-            actionCell.className =
-                "text-center align-middle";
-
-            actionCell.appendChild(
-                removeButton
-            );
+    priceWrapper.className =
+        "input-group";
 
 
-            row.appendChild(
-                sizeCell
-            );
+    const pricePrefix =
+        document.createElement("span");
 
-            row.appendChild(
-                quantityCell
-            );
+    pricePrefix.className =
+        "input-group-text";
 
-            row.appendChild(
-                actionCell
-            );
+    pricePrefix.textContent =
+        "₹";
 
 
-            sizeInventoryBody.appendChild(
-                row
-            );
+    const priceInput =
+        document.createElement("input");
+
+    priceInput.type =
+        "number";
+
+    priceInput.className =
+        "form-control";
+
+    priceInput.name =
+        "size_price[]";
+
+    priceInput.min =
+        "0.01";
+
+    priceInput.step =
+        "0.01";
+
+    priceInput.placeholder =
+        "0.00";
+
+    priceInput.value =
+        price;
 
 
-            sizeInput.addEventListener(
-                "input",
-                calculateSizeTotal
-            );
+    /*
+     * Existing product variant prices are displayed
+     * but are read-only for now.
+     *
+     * Variant price editing will be implemented later.
+     */
+    
 
-            quantityInput.addEventListener(
-                "input",
-                calculateSizeTotal
-            );
+    priceWrapper.appendChild(
+        pricePrefix
+    );
+
+    priceWrapper.appendChild(
+        priceInput
+    );
+
+    priceCell.appendChild(
+        priceWrapper
+    );
 
 
-            removeButton.addEventListener(
-                "click",
-                function () {
+    /* -----------------------------------------
+       QUANTITY CELL
+    ----------------------------------------- */
 
-                    row.remove();
+    const quantityCell =
+        document.createElement("td");
 
-                    calculateSizeTotal();
 
-                }
-            );
+    const quantityInput =
+        document.createElement("input");
+
+    quantityInput.type =
+        "number";
+
+    quantityInput.className =
+        "form-control size-quantity";
+
+    quantityInput.name =
+        "size_quantity[]";
+
+    quantityInput.min =
+        "0";
+
+    quantityInput.step =
+        "1";
+
+    quantityInput.value =
+        quantity;
+
+
+    /* -----------------------------------------
+       ACTION CELL
+    ----------------------------------------- */
+
+    const actionCell =
+        document.createElement("td");
+
+    actionCell.className =
+        "text-center align-middle";
+
+
+    const removeButton =
+        document.createElement("button");
+
+    removeButton.type =
+        "button";
+
+    removeButton.className =
+        "btn btn-outline-danger btn-sm";
+
+    removeButton.textContent =
+        "×";
+
+    removeButton.title =
+        "Remove size / variant";
+
+
+    /* -----------------------------------------
+       BUILD ROW
+    ----------------------------------------- */
+
+    sizeCell.appendChild(
+        sizeInput
+    );
+
+    quantityCell.appendChild(
+        quantityInput
+    );
+
+    actionCell.appendChild(
+        removeButton
+    );
+
+
+    row.appendChild(
+        sizeCell
+    );
+
+    row.appendChild(
+        priceCell
+    );
+
+    row.appendChild(
+        quantityCell
+    );
+
+    row.appendChild(
+        actionCell
+    );
+
+
+    sizeInventoryBody.appendChild(
+        row
+    );
+
+
+    /* -----------------------------------------
+       EVENTS
+    ----------------------------------------- */
+
+    sizeInput.addEventListener(
+        "input",
+        calculateSizeTotal
+    );
+
+    quantityInput.addEventListener(
+        "input",
+        calculateSizeTotal
+    );
+
+
+    removeButton.addEventListener(
+        "click",
+        function () {
+
+            row.remove();
+
+            calculateSizeTotal();
 
         }
+    );
+
+}
 
         /* -----------------------------------------
-           Existing Product Sizes
+           Existing Product Sizes / Variants
         ----------------------------------------- */
 
         {% if product and product.sizes %}
@@ -1582,7 +1687,9 @@ document.addEventListener(
 
         addSizeRow(
             {{ product_size.size | tojson }},
-            {{ product_size.quantity }}
+            {{ product_size.price }},
+            {{ product_size.quantity }},
+            false
         );
 
         {% endfor %}

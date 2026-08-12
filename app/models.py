@@ -574,3 +574,90 @@ class Banner(db.Model):
         server_default=db.func.current_timestamp(),
         onupdate=db.func.current_timestamp()
     )
+
+# =========================================================
+# CART ITEM
+# =========================================================
+
+class CartItem(db.Model):
+
+    __tablename__ = "cart_items"
+
+    id = db.Column(
+        db.BigInteger,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    user_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("users.id"),
+        nullable=False,
+        index=True
+    )
+
+    product_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("products.id"),
+        nullable=False,
+        index=True
+    )
+
+    product_size_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("product_sizes.id"),
+        nullable=True,
+        index=True
+    )
+
+    quantity = db.Column(
+        db.Integer,
+        nullable=False,
+        default=1
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp()
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+        onupdate=db.func.current_timestamp()
+    )
+
+    user = db.relationship(
+        "User",
+        backref=db.backref(
+            "cart_items",
+            lazy=True
+        )
+    )
+
+    product = db.relationship(
+        "Product",
+        backref=db.backref(
+            "cart_items",
+            lazy=True
+        )
+    )
+
+    product_size = db.relationship(
+        "ProductSize",
+        backref=db.backref(
+            "cart_items",
+            lazy=True
+        )
+    )
+
+    def __repr__(self):
+
+        return (
+            f"<CartItem "
+            f"user={self.user_id} "
+            f"product={self.product_id} "
+            f"variant={self.product_size_id}>"
+        )

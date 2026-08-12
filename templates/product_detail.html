@@ -1,0 +1,974 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+{{ product.name }} | ShopEase
+{% endblock %}
+
+
+{% block content %}
+
+<section class="py-5 product-detail-page">
+
+    <div class="container">
+
+        <!-- =================================================
+             BREADCRUMB
+        ================================================== -->
+
+        <nav
+            aria-label="breadcrumb"
+            class="mb-4"
+        >
+
+            <ol class="breadcrumb">
+
+                <li class="breadcrumb-item">
+                    <a
+                        href="{{ url_for('main.home') }}"
+                        class="text-decoration-none"
+                    >
+                        Home
+                    </a>
+                </li>
+
+                <li class="breadcrumb-item">
+
+                    <a
+                        href="{{ url_for(
+                            'main.products',
+                            category=product.category.slug
+                        ) }}"
+                        class="text-decoration-none"
+                    >
+                        {{ product.category.name }}
+                    </a>
+
+                </li>
+
+                {% if product.subcategory %}
+
+                    <li class="breadcrumb-item">
+
+                        <a
+                            href="{{ url_for(
+                                'main.products',
+                                category=product.category.slug,
+                                subcategory=product.subcategory.slug
+                            ) }}"
+                            class="text-decoration-none"
+                        >
+                            {{ product.subcategory.name }}
+                        </a>
+
+                    </li>
+
+                {% endif %}
+
+                <li
+                    class="breadcrumb-item active"
+                    aria-current="page"
+                >
+                    {{ product.name }}
+                </li>
+
+            </ol>
+
+        </nav>
+
+
+        <!-- =================================================
+             PRODUCT MAIN SECTION
+        ================================================== -->
+
+        <div class="row g-5">
+
+
+            <!-- =================================================
+                 PRODUCT IMAGES
+            ================================================== -->
+
+            <div class="col-lg-6">
+
+                <div class="product-detail-gallery">
+
+
+                    <!-- MAIN IMAGE -->
+
+                    <div
+                        class="product-detail-main-image"
+                        id="mainProductImage"
+                    >
+
+                        {% if product.images %}
+
+                            <img
+                                src="{{ url_for(
+                                    'main.product_image',
+                                    image_id=product.images[0].id
+                                ) }}"
+                                alt="{{ product.images[0].alt_text or product.name }}"
+                                id="mainProductImageElement"
+                            >
+
+                        {% else %}
+
+                            <div
+                                class="product-detail-no-image"
+                            >
+                                No Image Available
+                            </div>
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <!-- IMAGE THUMBNAILS -->
+
+                    {% if product.images|length > 1 %}
+
+                        <div
+                            class="product-detail-thumbnails"
+                        >
+
+                            {% for image in product.images %}
+
+                                <button
+                                    type="button"
+                                    class="product-thumbnail
+                                    {% if loop.first %}
+                                        active
+                                    {% endif %}"
+                                    onclick="changeProductImage(
+                                        '{{ url_for(
+                                            'main.product_image',
+                                            image_id=image.id
+                                        ) }}',
+                                        this
+                                    )"
+                                >
+
+                                    <img
+                                        src="{{ url_for(
+                                            'main.product_image',
+                                            image_id=image.id
+                                        ) }}"
+                                        alt="{{ image.alt_text or product.name }}"
+                                    >
+
+                                </button>
+
+                            {% endfor %}
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 PRODUCT INFORMATION
+            ================================================== -->
+
+            <div class="col-lg-6">
+
+                <div class="product-detail-info">
+
+
+                    <!-- BRAND -->
+
+                    {% if product.brand %}
+
+                        <div
+                            class="text-muted small mb-2"
+                        >
+                            {{ product.brand.name }}
+                        </div>
+
+                    {% endif %}
+
+
+                    <!-- PRODUCT NAME -->
+
+                    <h1
+                        class="fw-bold mb-3"
+                    >
+                        {{ product.name }}
+                    </h1>
+
+
+                    <!-- SKU -->
+
+                    <div
+                        class="text-muted small mb-3"
+                    >
+                        SKU: {{ product.sku }}
+                    </div>
+
+
+                    <!-- PRICE -->
+
+                    <div
+                        class="product-detail-price mb-4"
+                        id="productPrice"
+                    >
+                        ₹{{ "%.2f"|format(product.price) }}
+                    </div>
+
+
+                    <!-- =================================================
+                         VARIANTS
+                    ================================================== -->
+
+                    {% if product.sizes %}
+
+                        <div
+                            class="mb-4"
+                        >
+
+                            <label
+                                class="fw-semibold mb-2 d-block"
+                            >
+                                Size / Variant
+                            </label>
+
+
+                            <div
+                                class="product-variant-list"
+                            >
+
+                                {% for variant in product.sizes %}
+
+                                    <button
+                                        type="button"
+                                        class="product-variant-button
+                                        {% if loop.first and variant.quantity > 0 %}
+                                            active
+                                        {% endif %}
+                                        {% if variant.quantity <= 0 %}
+                                            disabled
+                                        {% endif %}"
+                                        data-price="{{ variant.price }}"
+                                        data-quantity="{{ variant.quantity }}"
+                                        data-variant-id="{{ variant.id }}"
+                                        onclick="selectVariant(this)"
+                                        {% if variant.quantity <= 0 %}
+                                            disabled
+                                        {% endif %}
+                                    >
+
+                                        <span>
+                                            {{ variant.size }}
+                                        </span>
+
+                                    </button>
+
+                                {% endfor %}
+
+                            </div>
+
+
+                            <div
+                                class="small mt-2"
+                                id="variantStock"
+                            ></div>
+
+                        </div>
+
+                    {% else %}
+
+                        <div
+                            class="mb-4"
+                        >
+
+                            {% if product.stock_quantity > 0 %}
+
+                                <span
+                                    class="text-success fw-semibold"
+                                >
+                                    ✓ In Stock
+                                </span>
+
+                            {% else %}
+
+                                <span
+                                    class="text-danger fw-semibold"
+                                >
+                                    Out of Stock
+                                </span>
+
+                            {% endif %}
+
+                        </div>
+
+                    {% endif %}
+
+
+                    <!-- =================================================
+                         DESCRIPTION
+                    ================================================== -->
+
+                    {% if product.description %}
+
+                        <div
+                            class="mb-4"
+                        >
+
+                            <h5 class="fw-semibold">
+                                Description
+                            </h5>
+
+                            <p
+                                class="text-muted"
+                                style="white-space: pre-line;"
+                            >
+                                {{ product.description }}
+                            </p>
+
+                        </div>
+
+                    {% endif %}
+
+
+                    <!-- =================================================
+                         QUANTITY
+                    ================================================== -->
+
+                    <div
+                        class="mb-4"
+                    >
+
+                        <label
+                            for="productQuantity"
+                            class="fw-semibold mb-2 d-block"
+                        >
+                            Quantity
+                        </label>
+
+                        <div
+                            class="input-group"
+                            style="max-width: 150px;"
+                        >
+
+                            <button
+                                type="button"
+                                class="btn btn-outline-secondary"
+                                onclick="changeQuantity(-1)"
+                            >
+                                −
+                            </button>
+
+                            <input
+                                type="number"
+                                id="productQuantity"
+                                class="form-control text-center"
+                                value="1"
+                                min="1"
+                            >
+
+                            <button
+                                type="button"
+                                class="btn btn-outline-secondary"
+                                onclick="changeQuantity(1)"
+                            >
+                                +
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         ACTIONS
+                    ================================================== -->
+
+                    <div
+                        class="d-flex gap-2 flex-wrap"
+                    >
+
+                        <form
+    method="POST"
+    action="{{ url_for('main.add_to_cart') }}"
+    class="d-inline"
+>
+
+    <input
+        type="hidden"
+        name="product_id"
+        value="{{ product.id }}"
+    >
+
+    <input
+    type="hidden"
+    name="csrf_token"
+    value="{{ csrf_token() }}"
+>
+
+    <input
+        type="hidden"
+        name="product_size_id"
+        id="selectedVariantId"
+        value=""
+    >
+
+    <input
+        type="hidden"
+        name="quantity"
+        id="cartQuantity"
+        value="1"
+    >
+
+    <button
+        type="submit"
+        class="btn btn-primary btn-lg px-4"
+        id="addToCartButton"
+    >
+        🛒 Add to Cart
+    </button>
+
+</form>
+
+
+                        <button
+                            type="button"
+                            class="btn btn-outline-secondary btn-lg px-4"
+                            disabled
+                            title="Wishlist functionality will be added later"
+                        >
+                            ♡ Wishlist
+                        </button>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         PRODUCT DETAILS
+                    ================================================== -->
+
+                    <div
+                        class="border-top mt-4 pt-4"
+                    >
+
+                        <div class="row g-3">
+
+                            <div class="col-sm-6">
+
+                                <small class="text-muted d-block">
+                                    Category
+                                </small>
+
+                                <strong>
+                                    {{ product.category.name }}
+                                </strong>
+
+                            </div>
+
+
+                            {% if product.subcategory %}
+
+                                <div class="col-sm-6">
+
+                                    <small class="text-muted d-block">
+                                        Subcategory
+                                    </small>
+
+                                    <strong>
+                                        {{ product.subcategory.name }}
+                                    </strong>
+
+                                </div>
+
+                            {% endif %}
+
+
+                            <div class="col-sm-6">
+
+                                <small class="text-muted d-block">
+                                    Availability
+                                </small>
+
+                                <strong id="availabilityText">
+                                    {% if product.stock_quantity > 0 %}
+                                        In Stock
+                                    {% else %}
+                                        Out of Stock
+                                    {% endif %}
+                                </strong>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             SPECIFICATIONS
+        ================================================== -->
+
+        {% if product.specifications %}
+
+            <div
+                class="product-specifications mt-5"
+            >
+
+                <h3
+                    class="fw-bold mb-4"
+                >
+                    Specifications
+                </h3>
+
+
+                <div class="table-responsive">
+
+                    <table
+                        class="table table-bordered align-middle"
+                    >
+
+                        <tbody>
+
+                            {% for key, value in product.specifications.items() %}
+
+                                <tr>
+
+                                    <th
+                                        style="width: 30%;"
+                                        class="bg-light"
+                                    >
+                                        {{ key }}
+                                    </th>
+
+                                    <td>
+                                        {{ value }}
+                                    </td>
+
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        {% endif %}
+
+
+        <!-- =================================================
+             RELATED PRODUCTS
+        ================================================== -->
+
+        {% if related_products %}
+
+            <div
+                class="mt-5"
+            >
+
+                <div
+                    class="d-flex
+                           justify-content-between
+                           align-items-center
+                           mb-4"
+                >
+
+                    <h3
+                        class="fw-bold mb-0"
+                    >
+                        Related Products
+                    </h3>
+
+                    <a
+                        href="{{ url_for(
+                            'main.products',
+                            category=product.category.slug
+                        ) }}"
+                        class="btn btn-outline-primary btn-sm"
+                    >
+                        View More
+                    </a>
+
+                </div>
+
+
+                <div class="row g-4">
+
+                    {% for related in related_products %}
+
+                        <div
+                            class="col-6 col-md-4 col-lg-3"
+                        >
+
+                            <a
+                                href="{{ url_for(
+                                    'main.product_detail',
+                                    slug=related.slug
+                                ) }}"
+                                class="text-decoration-none"
+                            >
+
+                                <div
+                                    class="product-card h-100"
+                                >
+
+                                    <div
+                                        class="product-image-wrapper"
+                                    >
+
+                                        {% if related.images %}
+
+                                            <img
+                                                src="{{ url_for(
+                                                    'main.product_image',
+                                                    image_id=related.images[0].id
+                                                ) }}"
+                                                alt="{{ related.name }}"
+                                                class="product-image"
+                                            >
+
+                                        {% else %}
+
+                                            <div
+                                                class="product-image-placeholder"
+                                            >
+                                                No Image
+                                            </div>
+
+                                        {% endif %}
+
+                                    </div>
+
+
+                                    <div
+                                        class="product-card-body"
+                                    >
+
+                                        {% if related.brand %}
+
+                                            <small
+                                                class="text-muted"
+                                            >
+                                                {{ related.brand.name }}
+                                            </small>
+
+                                        {% endif %}
+
+                                        <h5
+                                            class="product-name"
+                                        >
+                                            {{ related.name }}
+                                        </h5>
+
+                                        <div
+                                            class="product-price"
+                                        >
+                                            ₹{{ "%.2f"|format(
+                                                related.price
+                                            ) }}
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </a>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</section>
+
+
+<!-- =========================================================
+     PRODUCT DETAIL JAVASCRIPT
+========================================================= -->
+
+<script>
+
+function changeProductImage(imageUrl, button) {
+
+    const mainImage =
+        document.getElementById(
+            "mainProductImageElement"
+        );
+
+    if (mainImage) {
+
+        mainImage.src = imageUrl;
+
+    }
+
+
+    document
+        .querySelectorAll(
+            ".product-thumbnail"
+        )
+        .forEach(
+            function (thumbnail) {
+
+                thumbnail.classList.remove(
+                    "active"
+                );
+
+            }
+        );
+
+
+    button.classList.add(
+        "active"
+    );
+}
+
+
+function selectVariant(button) {
+
+    document
+        .querySelectorAll(
+            ".product-variant-button"
+        )
+        .forEach(
+            function (variantButton) {
+
+                variantButton.classList.remove(
+                    "active"
+                );
+
+            }
+        );
+
+
+    button.classList.add(
+        "active"
+    );
+
+    const selectedVariantInput =
+    document.getElementById(
+        "selectedVariantId"
+    );
+
+if (selectedVariantInput) {
+
+    selectedVariantInput.value =
+        button.dataset.variantId;
+
+}
+
+
+    const price =
+        parseFloat(
+            button.dataset.price
+        );
+
+
+    const quantity =
+        parseInt(
+            button.dataset.quantity
+        );
+
+
+    const priceElement =
+        document.getElementById(
+            "productPrice"
+        );
+
+
+    const stockElement =
+        document.getElementById(
+            "variantStock"
+        );
+
+
+    const availabilityElement =
+        document.getElementById(
+            "availabilityText"
+        );
+
+
+    if (priceElement) {
+
+        priceElement.textContent =
+            "₹" + price.toFixed(2);
+
+    }
+
+
+    if (stockElement) {
+
+        if (quantity > 0) {
+
+            stockElement.textContent =
+                quantity + " available";
+
+            stockElement.className =
+                "small mt-2 text-success";
+
+        } else {
+
+            stockElement.textContent =
+                "Out of stock";
+
+            stockElement.className =
+                "small mt-2 text-danger";
+
+        }
+
+    }
+
+
+    if (availabilityElement) {
+
+        availabilityElement.textContent =
+            quantity > 0
+                ? "In Stock"
+                : "Out of Stock";
+
+        availabilityElement.className =
+            quantity > 0
+                ? "text-success fw-semibold"
+                : "text-danger fw-semibold";
+
+    }
+
+
+    const quantityInput =
+        document.getElementById(
+            "productQuantity"
+        );
+
+
+    if (quantityInput) {
+
+        quantityInput.value = 1;
+
+        quantityInput.max =
+            Math.max(
+                quantity,
+                1
+            );
+
+    }
+
+}
+
+
+function changeQuantity(change) {
+
+    const input =
+        document.getElementById(
+            "productQuantity"
+        );
+
+
+    if (!input) {
+        return;
+    }
+
+
+    let current =
+        parseInt(
+            input.value
+        ) || 1;
+
+
+    const max =
+        parseInt(
+            input.max
+        ) || 999;
+
+
+    current += change;
+
+
+    if (current < 1) {
+        current = 1;
+    }
+
+
+    if (current > max) {
+        current = max;
+    }
+
+
+    input.value = current;
+
+    const cartQuantity =
+    document.getElementById(
+        "cartQuantity"
+    );
+
+if (cartQuantity) {
+
+    cartQuantity.value =
+        current;
+
+}
+}
+
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+        const firstVariant =
+            document.querySelector(
+                ".product-variant-button.active"
+            );
+
+        
+
+        if (firstVariant) {
+
+            selectVariant(
+                firstVariant
+            );
+
+        }
+
+        const quantityInput =
+    document.getElementById(
+        "productQuantity"
+    );
+
+const cartQuantity =
+    document.getElementById(
+        "cartQuantity"
+    );
+
+if (
+    quantityInput &&
+    cartQuantity
+) {
+
+    cartQuantity.value =
+        quantityInput.value;
+
+}
+
+    }
+);
+
+</script>
+
+{% endblock %}

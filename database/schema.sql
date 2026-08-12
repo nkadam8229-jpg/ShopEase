@@ -528,3 +528,32 @@ CREATE TABLE product_sizes (
 
     INDEX idx_product_sizes_product (product_id)
 );
+
+
+ALTER TABLE cart_items
+ADD COLUMN product_size_id BIGINT UNSIGNED NULL AFTER product_id;
+
+ALTER TABLE cart_items
+ADD COLUMN cart_key VARCHAR(100)
+GENERATED ALWAYS AS (
+    CONCAT(
+        product_id,
+        '-',
+        COALESCE(product_size_id, 0)
+    )
+) STORED;
+
+ALTER TABLE cart_items
+DROP INDEX uq_cart_user_product;
+
+ALTER TABLE cart_items
+ADD UNIQUE KEY uq_cart_user_variant (
+    user_id,
+    cart_key
+);
+
+ALTER TABLE cart_items
+ADD CONSTRAINT fk_cart_product_size
+FOREIGN KEY (product_size_id)
+REFERENCES product_sizes(id)
+ON DELETE CASCADE;

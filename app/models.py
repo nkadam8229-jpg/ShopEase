@@ -395,6 +395,63 @@ class Product(db.Model):
         order_by="ProductImage.display_order"
     )
 
+    sizes = db.relationship(
+        "ProductSize",
+        back_populates="product",
+        cascade="all, delete-orphan",
+        order_by="ProductSize.id"
+    )
+
+
+# =========================================================
+# PRODUCT SIZE / VARIANT INVENTORY
+# =========================================================
+
+class ProductSize(db.Model):
+
+    __tablename__ = "product_sizes"
+
+    id = db.Column(
+        db.BigInteger,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    product_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("products.id"),
+        nullable=False,
+        index=True
+    )
+
+    size = db.Column(
+        db.String(50),
+        nullable=False
+    )
+
+    quantity = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp()
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+        onupdate=db.func.current_timestamp()
+    )
+
+    product = db.relationship(
+        "Product",
+        back_populates="sizes"
+    )
 
 # =========================================================
 # PRODUCT IMAGE

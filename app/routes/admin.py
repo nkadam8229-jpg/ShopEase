@@ -18,7 +18,8 @@ from app.models import (
     Category,
     Subcategory,
     Product,
-    ProductImage
+    ProductImage,
+    ProductSize
 )
 from app.services.upload_service import upload_image
 from app.services.storage_service import StorageService
@@ -1701,6 +1702,88 @@ def products():
 
 
 # =========================================================
+# PRODUCT SIZE VALIDATION
+# =========================================================
+
+def get_product_sizes_from_form():
+
+    size_names = request.form.getlist(
+        "size_name[]"
+    )
+
+    size_quantities = request.form.getlist(
+        "size_quantity[]"
+    )
+
+    if len(size_names) != len(size_quantities):
+
+        raise ValueError(
+            "Invalid size inventory data."
+        )
+
+    sizes = []
+    used_sizes = set()
+
+    for raw_name, raw_quantity in zip(
+        size_names,
+        size_quantities
+    ):
+
+        size = raw_name.strip()
+
+        if not size:
+            continue
+
+        normalized_size = size.lower()
+
+        if normalized_size in used_sizes:
+
+            raise ValueError(
+                f"Duplicate size '{size}' is not allowed."
+            )
+
+        used_sizes.add(
+            normalized_size
+        )
+
+        try:
+
+            quantity = int(
+                raw_quantity
+            )
+
+        except (ValueError, TypeError):
+
+            raise ValueError(
+                f"Invalid quantity for size '{size}'."
+            )
+
+        if quantity < 0:
+
+            raise ValueError(
+                f"Quantity for size '{size}' cannot be negative."
+            )
+
+        sizes.append(
+            {
+                "size": size,
+                "quantity": quantity
+            }
+        )
+
+    if not sizes:
+
+        raise ValueError(
+            "Add at least one size."
+        )
+
+    total_quantity = sum(
+        item["quantity"]
+        for item in sizes
+    )
+
+    return sizes, total_quantity
+# =========================================================
 # ADD PRODUCT
 # =========================================================
 
@@ -1781,6 +1864,10 @@ def add_product():
             ""
         ).strip()
 
+        has_sizes = request.form.get(
+            "has_sizes"
+        ) == "1"
+
         featured = request.form.get(
             "featured"
         ) == "1"
@@ -1853,20 +1940,7 @@ def add_product():
                 brands=brands
             )
 
-        if not stock_text:
 
-            flash(
-                "Stock quantity is required.",
-                "danger"
-            )
-
-            return render_template(
-                "admin/product_form.html",
-                product=None,
-                categories=categories,
-                subcategories=subcategories,
-                brands=brands
-            )
 
         # -------------------------------------------------
         # CATEGORY VALIDATION
@@ -2123,44 +2197,87 @@ def add_product():
             )
 
         # -------------------------------------------------
-        # STOCK VALIDATION
+        # STOCK / SIZE VALIDATION
         # -------------------------------------------------
 
-        try:
+        product_sizes = []
+        stock_quantity = 0
 
-            stock_quantity = int(
-                stock_text
-            )
+        if has_sizes:
 
-        except ValueError:
+            try:
 
-            flash(
-                "Stock quantity must be a whole number.",
-                "danger"
-            )
+                product_sizes, stock_quantity = (
+                    get_product_sizes_from_form()
+                )
 
-            return render_template(
-                "admin/product_form.html",
-                product=None,
-                categories=categories,
-                subcategories=subcategories,
-                brands=brands
-            )
+            except ValueError as error:
 
-        if stock_quantity < 0:
+                flash(
+                    str(error),
+                    "danger"
+                )
 
-            flash(
-                "Stock quantity cannot be negative.",
-                "danger"
-            )
+                return render_template(
+                    "admin/product_form.html",
+                    product=None,
+                    categories=categories,
+                    subcategories=subcategories,
+                    brands=brands
+                )
 
-            return render_template(
-                "admin/product_form.html",
-                product=None,
-                categories=categories,
-                subcategories=subcategories,
-                brands=brands
-            )
+        else:
+
+            if not stock_text:
+
+                flash(
+                    "Stock quantity is required.",
+                    "danger"
+                )
+
+                return render_template(
+                    "admin/product_form.html",
+                    product=None,
+                    categories=categories,
+                    subcategories=subcategories,
+                    brands=brands
+                )
+
+            try:
+
+                stock_quantity = int(
+                    stock_text
+                )
+
+            except ValueError:
+
+                flash(
+                    "Stock quantity must be a whole number.",
+                    "danger"
+                )
+
+                return render_template(
+                    "admin/product_form.html",
+                    product=None,
+                    categories=categories,
+                    subcategories=subcategories,
+                    brands=brands
+                )
+
+            if stock_quantity < 0:
+
+                flash(
+                    "Stock quantity cannot be negative.",
+                    "danger"
+                )
+
+                return render_template(
+                    "admin/product_form.html",
+                    product=None,
+                    categories=categories,
+                    subcategories=subcategories,
+                    brands=brands
+                )
 
         # -------------------------------------------------
         # SPECIFICATIONS JSON
@@ -2233,6 +2350,18 @@ def add_product():
         try:
 
             db.session.add(product)
+
+            if has_sizes:
+
+                for size_data in product_sizes:
+
+                    product.sizes.append(
+                        ProductSize(
+                            size=size_data["size"],
+                            quantity=size_data["quantity"]
+                        )
+                    )
+
             db.session.commit()
 
         except IntegrityError:
@@ -2907,6 +3036,10 @@ def edit_product(product_id):
             ""
         ).strip()
 
+        has_sizes = request.form.get(
+            "has_sizes"
+        ) == "1"
+
         featured = request.form.get(
             "featured"
         ) == "1"
@@ -2979,20 +3112,7 @@ def edit_product(product_id):
                 brands=brands
             )
 
-        if not stock_text:
 
-            flash(
-                "Stock quantity is required.",
-                "danger"
-            )
-
-            return render_template(
-                "admin/product_form.html",
-                product=product,
-                categories=categories,
-                subcategories=subcategories,
-                brands=brands
-            )
 
         # -------------------------------------------------
         # CATEGORY
@@ -3259,45 +3379,87 @@ def edit_product(product_id):
             )
 
         # -------------------------------------------------
-        # STOCK
+        # STOCK / SIZE VALIDATION
         # -------------------------------------------------
 
-        try:
+        product_sizes = []
+        stock_quantity = 0
 
-            stock_quantity = int(
-                stock_text
-            )
+        if has_sizes:
 
-        except ValueError:
+            try:
 
-            flash(
-                "Stock quantity must be a whole number.",
-                "danger"
-            )
+                product_sizes, stock_quantity = (
+                    get_product_sizes_from_form()
+                )
 
-            return render_template(
-                "admin/product_form.html",
-                product=product,
-                categories=categories,
-                subcategories=subcategories,
-                brands=brands
-            )
+            except ValueError as error:
 
-        if stock_quantity < 0:
+                flash(
+                    str(error),
+                    "danger"
+                )
 
-            flash(
-                "Stock quantity cannot be negative.",
-                "danger"
-            )
+                return render_template(
+                    "admin/product_form.html",
+                    product=product,
+                    categories=categories,
+                    subcategories=subcategories,
+                    brands=brands
+                )
 
-            return render_template(
-                "admin/product_form.html",
-                product=product,
-                categories=categories,
-                subcategories=subcategories,
-                brands=brands
-            )
+        else:
 
+            if not stock_text:
+
+                flash(
+                    "Stock quantity is required.",
+                    "danger"
+                )
+
+                return render_template(
+                    "admin/product_form.html",
+                    product=product,
+                    categories=categories,
+                    subcategories=subcategories,
+                    brands=brands
+                )
+
+            try:
+
+                stock_quantity = int(
+                    stock_text
+                )
+
+            except ValueError:
+
+                flash(
+                    "Stock quantity must be a whole number.",
+                    "danger"
+                )
+
+                return render_template(
+                    "admin/product_form.html",
+                    product=product,
+                    categories=categories,
+                    subcategories=subcategories,
+                    brands=brands
+                )
+
+            if stock_quantity < 0:
+
+                flash(
+                    "Stock quantity cannot be negative.",
+                    "danger"
+                )
+
+                return render_template(
+                    "admin/product_form.html",
+                    product=product,
+                    categories=categories,
+                    subcategories=subcategories,
+                    brands=brands
+                )
         # -------------------------------------------------
         # SPECIFICATIONS
         # -------------------------------------------------
@@ -3366,16 +3528,60 @@ def edit_product(product_id):
 
         try:
 
+            if has_sizes:
+
+                # Remove existing size records first.
+                product.sizes.clear()
+
+                # Force DELETE statements to be executed
+                # before inserting the new size records.
+                db.session.flush()
+
+                # Add the current size inventory.
+                for size_data in product_sizes:
+
+                    product.sizes.append(
+                        ProductSize(
+                            size=size_data["size"],
+                            quantity=size_data["quantity"]
+                        )
+                    )
+
+            else:
+
+                # Product no longer uses sizes.
+                product.sizes.clear()
+
             db.session.commit()
 
-        except IntegrityError:
+        except IntegrityError as error:
 
             db.session.rollback()
+
+            print(
+                "PRODUCT UPDATE INTEGRITY ERROR:",
+                error
+            )
 
             flash(
                 "Unable to update product. "
                 "Please check the product details.",
                 "danger"
+            )
+
+            return render_template(
+                "admin/product_form.html",
+                product=product,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
+            )
+            return render_template(
+                "admin/product_form.html",
+                product=product,
+                categories=categories,
+                subcategories=subcategories,
+                brands=brands
             )
 
             return render_template(

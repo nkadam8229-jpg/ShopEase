@@ -153,7 +153,7 @@ CREATE TABLE `cart_items` (
   CONSTRAINT `fk_cart_product_size` FOREIGN KEY (`product_size_id`) REFERENCES `product_sizes` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_cart_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `chk_cart_quantity` CHECK ((`quantity` > 0))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -219,6 +219,7 @@ CREATE TABLE `orders` (
   `user_id` bigint unsigned NOT NULL,
   `order_number` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL,
   `subtotal` decimal(12,2) NOT NULL,
+  `delivery_fee` decimal(12,2) NOT NULL DEFAULT '0.00',
   `total_amount` decimal(12,2) NOT NULL,
   `payment_method` enum('COD') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'COD',
   `status` enum('PENDING','CONFIRMED','PACKED','SHIPPED','DELIVERED','CANCELLED') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PENDING',
@@ -228,6 +229,7 @@ CREATE TABLE `orders` (
   `cancellation_approved_at` timestamp NULL DEFAULT NULL,
   `shipping_full_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `shipping_phone` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `shipping_email` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
   `shipping_address_line` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `shipping_city` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `shipping_state` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -264,7 +266,7 @@ CREATE TABLE `product_images` (
   KEY `idx_product_images_product` (`product_id`),
   KEY `idx_product_images_order` (`product_id`,`display_order`),
   CONSTRAINT `fk_product_images_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=53 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=63 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -280,13 +282,15 @@ CREATE TABLE `product_sizes` (
   `size` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `price` decimal(12,2) DEFAULT NULL,
   `quantity` int unsigned NOT NULL DEFAULT '0',
+  `description` text COLLATE utf8mb4_unicode_ci,
+  `specifications` json DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_product_size` (`product_id`,`size`),
   KEY `idx_product_sizes_product` (`product_id`),
   CONSTRAINT `fk_product_sizes_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=48 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -343,7 +347,7 @@ CREATE TABLE `products` (
   CONSTRAINT `fk_products_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `fk_products_subcategory` FOREIGN KEY (`subcategory_id`) REFERENCES `subcategories` (`id`) ON DELETE SET NULL,
   CONSTRAINT `chk_products_price` CHECK ((`price` >= 0))
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -428,7 +432,7 @@ CREATE TABLE `users` (
   UNIQUE KEY `phone` (`phone`),
   KEY `idx_users_email` (`email`),
   KEY `idx_users_phone` (`phone`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -451,6 +455,14 @@ CREATE TABLE `wishlist` (
   CONSTRAINT `fk_wishlist_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping events for database 'shopease'
+--
+
+--
+-- Dumping routines for database 'shopease'
+--
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -461,4 +473,4 @@ CREATE TABLE `wishlist` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-08-12 18:00:54
+-- Dump completed on 2026-08-13 14:48:04

@@ -1,0 +1,878 @@
+{% extends "base.html" %}
+
+{% block title %}
+Checkout - ShopEase
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <!-- =====================================================
+         PAGE HEADER
+    ====================================================== -->
+
+    <div class="mb-4">
+
+        <h2 class="fw-bold mb-1">
+            Checkout
+        </h2>
+
+        <p class="text-muted mb-0">
+            Enter your delivery details and review your order.
+        </p>
+
+    </div>
+
+
+    <form
+        method="POST"
+        action="{{ url_for('main.place_order') }}"
+        id="checkoutForm"
+    >
+
+        <div class="row g-4">
+
+            <!-- =================================================
+                 LEFT SIDE
+            ================================================== -->
+
+            <div class="col-lg-8">
+
+
+                <!-- =============================================
+                     DELIVERY ADDRESS
+                ============================================== -->
+
+                <div class="card border-0 shadow-sm mb-4">
+
+                    <div class="card-body p-4">
+
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+
+                            <div>
+
+                                <h5 class="fw-bold mb-1">
+                                    Delivery Address
+                                </h5>
+
+                                <small class="text-muted">
+                                    Where should we deliver your order?
+                                </small>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- =====================================
+                             SAVED ADDRESSES
+                        ====================================== -->
+
+                        {% if addresses %}
+
+                        <div class="mb-4">
+
+                            <label class="form-label fw-semibold">
+                                Saved Addresses
+                            </label>
+
+                            <div class="row g-3">
+
+                                {% for address in addresses %}
+
+                                <div class="col-md-6">
+
+                                    <div
+                                        class="border rounded p-3 h-100 address-card"
+                                        data-address-id="{{ address.id }}"
+                                        style="cursor:pointer;"
+                                    >
+
+                                        <div class="d-flex justify-content-between">
+
+                                            <div>
+
+                                                <strong>
+                                                    {{ address.full_name }}
+                                                </strong>
+
+                                                {% if address.is_default %}
+
+                                                <span class="badge bg-primary ms-1">
+                                                    Default
+                                                </span>
+
+                                                {% endif %}
+
+                                            </div>
+
+                                            <input
+                                                type="radio"
+                                                name="saved_address"
+                                                value="{{ address.id }}"
+                                                class="form-check-input saved-address-radio"
+                                            >
+
+                                        </div>
+
+
+                                        <div class="small text-muted mt-2">
+
+                                            <div>
+                                                {{ address.phone }}
+                                            </div>
+
+                                            <div>
+                                                {{ address.address_line }}
+                                            </div>
+
+                                            <div>
+                                                {{ address.city }},
+                                                {{ address.state }}
+                                                - {{ address.pincode }}
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                                {% endfor %}
+
+                            </div>
+
+                        </div>
+
+                        {% endif %}
+
+
+                        <!-- =====================================
+                             NEW / CUSTOM ADDRESS
+                        ====================================== -->
+
+                        <div class="border-top pt-4">
+
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+
+                                <div>
+
+                                    <h6 class="fw-bold mb-1">
+                                        Delivery Details
+                                    </h6>
+
+                                    <small class="text-muted">
+                                        You can use a saved address or enter new details.
+                                    </small>
+
+                                </div>
+
+                                {% if addresses %}
+
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-primary btn-sm"
+                                    id="newAddressButton"
+                                >
+                                    Use New Address
+                                </button>
+
+                                {% endif %}
+
+                            </div>
+
+
+                            <!-- =================================
+                                 SOMEONE ELSE
+                            ================================== -->
+
+                            <div class="form-check mb-4">
+
+                                <input
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    id="someoneElse"
+                                >
+
+                                <label
+                                    class="form-check-label fw-semibold"
+                                    for="someoneElse"
+                                >
+                                    This order is for someone else
+                                </label>
+
+                                <div class="small text-muted ms-4 mt-1">
+
+                                    Enter the recipient's contact details below.
+                                    Your account information will not be changed.
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- =================================
+                                 CONTACT DETAILS
+                            ================================== -->
+
+                            <div class="row g-3">
+
+                                <div class="col-md-6">
+
+                                    <label
+                                        for="full_name"
+                                        class="form-label"
+                                    >
+                                        Full Name
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        class="form-control"
+                                        id="full_name"
+                                        name="full_name"
+                                        required
+                                    >
+
+                                </div>
+
+
+                                <div class="col-md-6">
+
+                                    <label
+                                        for="phone"
+                                        class="form-label"
+                                    >
+                                        Mobile Number
+                                    </label>
+
+                                    <input
+                                        type="tel"
+                                        class="form-control"
+                                        id="phone"
+                                        name="phone"
+                                        required
+                                    >
+
+                                </div>
+
+
+                                <div class="col-12">
+
+                                    <label
+                                        for="email"
+                                        class="form-label"
+                                    >
+                                        Email Address
+                                    </label>
+
+                                    <input
+                                        type="email"
+                                        class="form-control"
+                                        id="email"
+                                        name="email"
+                                        required
+                                    >
+
+                                </div>
+
+
+                                <div class="col-12">
+
+                                    <label
+                                        for="address_line"
+                                        class="form-label"
+                                    >
+                                        Full Address
+                                    </label>
+
+                                    <textarea
+                                        class="form-control"
+                                        id="address_line"
+                                        name="address_line"
+                                        rows="3"
+                                        placeholder="House / Flat / Building / Street / Area"
+                                        required
+                                    ></textarea>
+
+                                </div>
+
+
+                                <div class="col-md-4">
+
+                                    <label
+                                        for="city"
+                                        class="form-label"
+                                    >
+                                        City
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        class="form-control"
+                                        id="city"
+                                        name="city"
+                                        required
+                                    >
+
+                                </div>
+
+
+                                <div class="col-md-4">
+
+                                    <label
+                                        for="state"
+                                        class="form-label"
+                                    >
+                                        State
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        class="form-control"
+                                        id="state"
+                                        name="state"
+                                        required
+                                    >
+
+                                </div>
+
+
+                                <div class="col-md-4">
+
+                                    <label
+                                        for="pincode"
+                                        class="form-label"
+                                    >
+                                        PIN Code
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        class="form-control"
+                                        id="pincode"
+                                        name="pincode"
+                                        maxlength="10"
+                                        required
+                                    >
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- =================================================
+                     PAYMENT
+                ================================================== -->
+
+                <div class="card border-0 shadow-sm mb-4">
+
+                    <div class="card-body p-4">
+
+                        <h5 class="fw-bold mb-1">
+                            Payment Method
+                        </h5>
+
+                        <small class="text-muted d-block mb-3">
+                            Payment processing will be added later.
+                        </small>
+
+
+                        <div class="border rounded p-3">
+
+                            <div class="form-check">
+
+                                <input
+                                    class="form-check-input"
+                                    type="radio"
+                                    checked
+                                    disabled
+                                >
+
+                                <label class="form-check-label">
+
+                                    <strong>
+                                        Online Payment
+                                    </strong>
+
+                                    <div class="small text-muted">
+                                        Payment gateway will be integrated later.
+                                    </div>
+
+                                </label>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 RIGHT SIDE — ORDER SUMMARY
+            ================================================== -->
+
+            <div class="col-lg-4">
+
+                <div
+                    class="card border-0 shadow-sm"
+                    style="position:sticky;top:20px;"
+                >
+
+                    <div class="card-body p-4">
+
+                        <h5 class="fw-bold mb-4">
+                            Order Summary
+                        </h5>
+
+
+                        <!-- =====================================
+                             ITEMS
+                        ====================================== -->
+
+                        {% for item in cart_items %}
+
+                        <div class="d-flex justify-content-between gap-3 mb-3">
+
+                            <div>
+
+                                <div class="fw-semibold">
+
+                                    {{ item.product.name }}
+
+                                </div>
+
+
+                                {% if item.product_size %}
+
+                                <div class="small text-muted">
+
+                                    Variant:
+                                    {{ item.product_size.size }}
+
+                                </div>
+
+                                {% endif %}
+
+
+                                <div class="small text-muted">
+
+                                    Qty: {{ item.quantity }}
+
+                                </div>
+
+                            </div>
+
+
+                            <div class="text-end fw-semibold">
+
+                                ₹{{ "%.2f"|format(item.subtotal) }}
+
+                            </div>
+
+                        </div>
+
+                        {% endfor %}
+
+
+                        <hr>
+
+
+                        <!-- =====================================
+                             SUBTOTAL
+                        ====================================== -->
+
+                        <div class="d-flex justify-content-between mb-2">
+
+                            <span class="text-muted">
+                                Subtotal
+                            </span>
+
+                            <span>
+                                ₹{{ "%.2f"|format(subtotal) }}
+                            </span>
+
+                        </div>
+
+
+                        <!-- =====================================
+                             DELIVERY
+                        ====================================== -->
+
+                        <div class="d-flex justify-content-between mb-3">
+
+                            <span class="text-muted">
+                                Delivery
+                            </span>
+
+                            {% if delivery_fee > 0 %}
+
+                            <span>
+                                ₹{{ "%.2f"|format(delivery_fee) }}
+                            </span>
+
+                            {% else %}
+
+                            <span class="text-success fw-semibold">
+                                FREE
+                            </span>
+
+                            {% endif %}
+
+                        </div>
+
+
+                        <hr>
+
+
+                        <!-- =====================================
+                             TOTAL
+                        ====================================== -->
+
+                        <div class="d-flex justify-content-between mb-4">
+
+                            <span class="fw-bold">
+                                Total
+                            </span>
+
+                            <span class="fw-bold fs-5">
+                                ₹{{ "%.2f"|format(total_amount) }}
+                            </span>
+
+                        </div>
+
+
+                        <!-- =====================================
+                             FREE DELIVERY MESSAGE
+                        ====================================== -->
+
+                        {% if delivery_fee == 0 %}
+
+                        <div class="alert alert-success small py-2">
+
+                            🎉 You qualify for free delivery.
+
+                        </div>
+
+                        {% else %}
+
+                        <div class="alert alert-light border small py-2">
+
+                            Add ₹{{ "%.2f"|format(1000 - subtotal) }}
+                            more to get free delivery.
+
+                        </div>
+
+                        {% endif %}
+
+
+                        <!-- =====================================
+                             CONFIRM ORDER
+                        ====================================== -->
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary w-100 py-2"
+                        >
+                            Confirm Order
+                        </button>
+
+
+                        <a
+                            href="{{ url_for('main.cart') }}"
+                            class="btn btn-outline-secondary w-100 mt-2"
+                        >
+                            Back to Cart
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </form>
+
+</div>
+
+
+<script>
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+        const radios =
+            document.querySelectorAll(
+                ".saved-address-radio"
+            );
+
+        const addressCards =
+            document.querySelectorAll(
+                ".address-card"
+            );
+
+        const newAddressButton =
+            document.getElementById(
+                "newAddressButton"
+            );
+
+
+        const fullName =
+            document.getElementById(
+                "full_name"
+            );
+
+        const phone =
+            document.getElementById(
+                "phone"
+            );
+
+        const addressLine =
+            document.getElementById(
+                "address_line"
+            );
+
+        const city =
+            document.getElementById(
+                "city"
+            );
+
+        const state =
+            document.getElementById(
+                "state"
+            );
+
+        const pincode =
+            document.getElementById(
+                "pincode"
+            );
+
+
+        /* =========================================
+           SAVED ADDRESS DATA
+        ========================================= */
+
+        const savedAddresses = {
+
+            {% for address in addresses %}
+
+            "{{ address.id }}": {
+
+                full_name:
+                    {{ address.full_name | tojson }},
+
+                phone:
+                    {{ address.phone | tojson }},
+
+                address_line:
+                    {{ address.address_line | tojson }},
+
+                city:
+                    {{ address.city | tojson }},
+
+                state:
+                    {{ address.state | tojson }},
+
+                pincode:
+                    {{ address.pincode | tojson }}
+
+            },
+
+            {% endfor %}
+
+        };
+
+
+        /* =========================================
+           LOAD SAVED ADDRESS
+        ========================================= */
+
+        function loadAddress(
+            addressId
+        ) {
+
+            const address =
+                savedAddresses[addressId];
+
+            if (!address) {
+                return;
+            }
+
+
+            fullName.value =
+                address.full_name;
+
+            phone.value =
+                address.phone;
+
+            addressLine.value =
+                address.address_line;
+
+            city.value =
+                address.city;
+
+            state.value =
+                address.state;
+
+            pincode.value =
+                address.pincode;
+
+        }
+
+
+        /* =========================================
+           RADIO EVENTS
+        ========================================= */
+
+        radios.forEach(
+            function (radio) {
+
+                radio.addEventListener(
+                    "change",
+                    function () {
+
+                        if (this.checked) {
+
+                            loadAddress(
+                                this.value
+                            );
+
+                        }
+
+                    }
+                );
+
+            }
+        );
+
+
+        /* =========================================
+           CARD CLICK
+        ========================================= */
+
+        addressCards.forEach(
+            function (card) {
+
+                card.addEventListener(
+                    "click",
+                    function (event) {
+
+                        if (
+                            event.target.tagName ===
+                            "INPUT"
+                        ) {
+                            return;
+                        }
+
+
+                        const radio =
+                            card.querySelector(
+                                ".saved-address-radio"
+                            );
+
+
+                        if (radio) {
+
+                            radio.checked =
+                                true;
+
+                            loadAddress(
+                                radio.value
+                            );
+
+                        }
+
+                    }
+                );
+
+            }
+        );
+
+
+        /* =========================================
+           NEW ADDRESS
+        ========================================= */
+
+        if (newAddressButton) {
+
+            newAddressButton.addEventListener(
+                "click",
+                function () {
+
+                    radios.forEach(
+                        function (radio) {
+
+                            radio.checked =
+                                false;
+
+                        }
+                    );
+
+
+                    fullName.value = "";
+                    phone.value = "";
+                    addressLine.value = "";
+                    city.value = "";
+                    state.value = "";
+                    pincode.value = "";
+
+
+                    fullName.focus();
+
+                }
+            );
+
+        }
+
+
+        /* =========================================
+           LOAD DEFAULT ADDRESS
+        ========================================= */
+
+        {% for address in addresses %}
+
+        {% if address.is_default %}
+
+        const defaultRadio =
+            document.querySelector(
+                '.saved-address-radio[value="{{ address.id }}"]'
+            );
+
+        if (defaultRadio) {
+
+            defaultRadio.checked =
+                true;
+
+            loadAddress(
+                "{{ address.id }}"
+            );
+
+        }
+
+        {% endif %}
+
+        {% endfor %}
+
+    }
+
+);
+
+</script>
+
+{% endblock %}

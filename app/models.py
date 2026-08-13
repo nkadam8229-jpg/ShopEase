@@ -671,3 +671,316 @@ class CartItem(db.Model):
             f"product={self.product_id} "
             f"variant={self.product_size_id}>"
         )
+
+# =========================================================
+# ADDRESS
+# =========================================================
+
+class Address(db.Model):
+
+    __tablename__ = "addresses"
+
+    id = db.Column(
+        db.BigInteger,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    user_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("users.id"),
+        nullable=False,
+        index=True
+    )
+
+    full_name = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+    phone = db.Column(
+        db.String(20),
+        nullable=False
+    )
+
+    address_line = db.Column(
+        db.String(255),
+        nullable=False
+    )
+
+    city = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+    state = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+    pincode = db.Column(
+        db.String(10),
+        nullable=False
+    )
+
+    is_default = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp()
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+        onupdate=db.func.current_timestamp()
+    )
+
+    user = db.relationship(
+        "User",
+        backref=db.backref(
+            "addresses",
+            lazy=True
+        )
+    )
+
+
+# =========================================================
+# ORDER
+# =========================================================
+
+class Order(db.Model):
+
+    __tablename__ = "orders"
+
+    id = db.Column(
+        db.BigInteger,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    user_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("users.id"),
+        nullable=False,
+        index=True
+    )
+
+    order_number = db.Column(
+        db.String(30),
+        unique=True,
+        nullable=False
+    )
+
+    subtotal = db.Column(
+        db.Numeric(12, 2),
+        nullable=False
+    )
+
+    delivery_fee = db.Column(
+        db.Numeric(12, 2),
+        nullable=False,
+        default=0
+    )
+
+    total_amount = db.Column(
+        db.Numeric(12, 2),
+        nullable=False
+    )
+
+    payment_method = db.Column(
+        db.Enum("COD"),
+        nullable=False,
+        default="COD"
+    )
+
+    status = db.Column(
+        db.Enum(
+            "PENDING",
+            "CONFIRMED",
+            "PACKED",
+            "SHIPPED",
+            "DELIVERED",
+            "CANCELLED"
+        ),
+        nullable=False,
+        default="PENDING",
+        index=True
+    )
+
+    cancellation_requested = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False
+    )
+
+    cancellation_reason = db.Column(
+        db.String(500),
+        nullable=True
+    )
+
+    cancellation_requested_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+    cancellation_approved_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+    shipping_full_name = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+    shipping_phone = db.Column(
+        db.String(20),
+        nullable=False
+    )
+
+    shipping_email = db.Column(
+        db.String(150),
+        nullable=False
+    )
+
+    shipping_address_line = db.Column(
+        db.String(255),
+        nullable=False
+    )
+
+    shipping_city = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+    shipping_state = db.Column(
+        db.String(100),
+        nullable=False
+    )
+
+    shipping_pincode = db.Column(
+        db.String(10),
+        nullable=False
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+        index=True
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+        onupdate=db.func.current_timestamp()
+    )
+
+    user = db.relationship(
+        "User",
+        backref=db.backref(
+            "orders",
+            lazy=True
+        )
+    )
+
+    items = db.relationship(
+        "OrderItem",
+        back_populates="order",
+        cascade="all, delete-orphan"
+    )
+
+
+# =========================================================
+# ORDER ITEM
+# =========================================================
+
+class OrderItem(db.Model):
+
+    __tablename__ = "order_items"
+
+    id = db.Column(
+        db.BigInteger,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    order_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("orders.id"),
+        nullable=False,
+        index=True
+    )
+
+    product_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("products.id"),
+        nullable=True,
+        index=True
+    )
+
+    product_size_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("product_sizes.id"),
+        nullable=True,
+        index=True
+    )
+
+    product_name = db.Column(
+        db.String(200),
+        nullable=False
+    )
+
+    sku = db.Column(
+        db.String(50),
+        nullable=False
+    )
+
+    variant_name = db.Column(
+        db.String(100),
+        nullable=True
+    )
+
+    quantity = db.Column(
+        db.Integer,
+        nullable=False
+    )
+
+    unit_price = db.Column(
+        db.Numeric(12, 2),
+        nullable=False
+    )
+
+    total_price = db.Column(
+        db.Numeric(12, 2),
+        nullable=False
+    )
+
+    order = db.relationship(
+        "Order",
+        back_populates="items"
+    )
+
+    product = db.relationship(
+        "Product",
+        backref=db.backref(
+            "order_items",
+            lazy=True
+        )
+    )
+
+    product_size = db.relationship(
+        "ProductSize",
+        backref=db.backref(
+            "order_items",
+            lazy=True
+        )
+    )

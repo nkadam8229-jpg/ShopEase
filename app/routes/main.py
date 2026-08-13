@@ -21,9 +21,15 @@ from app.models import (
     Brand,
     Product,
     ProductSize,
-    CartItem
+    CartItem,
+    Address,
+    Order,
+    OrderItem
 )
 
+from decimal import Decimal
+from datetime import datetime
+import secrets
 from app.services.storage_service import StorageService
 
 
@@ -1537,4 +1543,642 @@ def remove_cart_item(cart_item_id):
 
     return redirect(
         url_for("main.cart")
+    )
+
+
+# =========================================================
+# CHECKOUT
+# =========================================================
+
+@main_bp.route(
+    "/checkout",
+    methods=["GET"]
+)
+def checkout():
+
+    # -----------------------------------------------------
+    # LOGIN REQUIRED
+    # -----------------------------------------------------
+
+    user_id = session.get("user_id")
+
+    if not user_id:
+
+        flash(
+            "Please login to continue to checkout.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("auth.login")
+        )
+
+
+    # -----------------------------------------------------
+    # GET CART ITEMS
+    # -----------------------------------------------------
+
+    cart_items = (
+        CartItem.query
+        .filter_by(
+            user_id=user_id
+        )
+        .order_by(
+            CartItem.created_at.desc()
+        )
+        .all()
+    )
+
+
+    if not cart_items:
+
+        flash(
+            "Your cart is empty.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("main.cart")
+        )
+
+
+    # -----------------------------------------------------
+    # CALCULATE CURRENT TOTAL
+    # -----------------------------------------------------
+
+    subtotal = Decimal("0.00")
+
+    for item in cart_items:
+
+        if item.product_size:
+
+            item_price = Decimal(
+                str(item.product_size.price)
+            )
+
+            available_stock = (
+                item.product_size.quantity
+            )
+
+        else:
+
+            item_price = Decimal(
+                str(item.product.price)
+            )
+
+            available_stock = (
+                item.product.stock_quantity
+            )
+
+
+        # -------------------------------------------------
+        # STOCK VALIDATION
+        # -------------------------------------------------
+
+        if available_stock <= 0:
+
+            flash(
+                f"{item.product.name} is out of stock.",
+                "danger"
+            )
+
+            return redirect(
+                url_for("main.cart")
+            )
+
+
+        if item.quantity > available_stock:
+
+            flash(
+                f"Only {available_stock} item(s) of "
+                f"{item.product.name} are available.",
+                "warning"
+            )
+
+            return redirect(
+                url_for("main.cart")
+            )
+
+
+        item.subtotal = (
+            item_price * item.quantity
+        )
+
+        subtotal += item.subtotal
+
+
+    # -----------------------------------------------------
+    # DELIVERY FEE
+    #
+    # Below ₹1,000  → ₹100
+    # ₹1,000+       → FREE
+    # -----------------------------------------------------
+
+    if subtotal < Decimal("1000.00"):
+
+        delivery_fee = Decimal("100.00")
+
+    else:
+
+        delivery_fee = Decimal("0.00")
+
+
+    total_amount = (
+        subtotal
+        + delivery_fee
+    )
+
+
+    # -----------------------------------------------------
+    # SAVED ADDRESSES
+    # -----------------------------------------------------
+
+    addresses = (
+        Address.query
+        .filter_by(
+            user_id=user_id
+        )
+        .order_by(
+            Address.is_default.desc(),
+            Address.created_at.desc()
+        )
+        .all()
+    )
+
+
+    # -----------------------------------------------------
+    # RENDER CHECKOUT
+    # -----------------------------------------------------
+
+    return render_template(
+        "checkout.html",
+        cart_items=cart_items,
+        subtotal=subtotal,
+        delivery_fee=delivery_fee,
+        total_amount=total_amount,
+        addresses=addresses
+    )
+
+
+# =========================================================
+# PLACE ORDER
+# =========================================================
+
+@main_bp.route(
+    "/checkout/place-order",
+    methods=["POST"]
+)
+def place_order():
+
+    # -----------------------------------------------------
+    # LOGIN REQUIRED
+    # -----------------------------------------------------
+
+    user_id = session.get("user_id")
+
+    if not user_id:
+
+        flash(
+            "Please login to place an order.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("auth.login")
+        )
+
+
+    # -----------------------------------------------------
+    # CART
+    # -----------------------------------------------------
+
+    cart_items = (
+        CartItem.query
+        .filter_by(
+            user_id=user_id
+        )
+        .order_by(
+            CartItem.created_at.asc()
+        )
+        .all()
+    )
+
+
+    if not cart_items:
+
+        flash(
+            "Your cart is empty.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("main.cart")
+        )
+
+
+    # -----------------------------------------------------
+    # CUSTOMER / RECIPIENT DETAILS
+    # -----------------------------------------------------
+
+    full_name = (
+        request.form.get(
+            "full_name",
+            ""
+        )
+        .strip()
+    )
+
+    phone = (
+        request.form.get(
+            "phone",
+            ""
+        )
+        .strip()
+    )
+
+    email = (
+        request.form.get(
+            "email",
+            ""
+        )
+        .strip()
+    )
+
+    address_line = (
+        request.form.get(
+            "address_line",
+            ""
+        )
+        .strip()
+    )
+
+    city = (
+        request.form.get(
+            "city",
+            ""
+        )
+        .strip()
+    )
+
+    state = (
+        request.form.get(
+            "state",
+            ""
+        )
+        .strip()
+    )
+
+    pincode = (
+        request.form.get(
+            "pincode",
+            ""
+        )
+        .strip()
+    )
+
+
+    # -----------------------------------------------------
+    # BASIC VALIDATION
+    # -----------------------------------------------------
+
+    if not full_name:
+
+        flash(
+            "Please enter the recipient name.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("main.checkout")
+        )
+
+
+    if not phone:
+
+        flash(
+            "Please enter a mobile number.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("main.checkout")
+        )
+
+
+    if not email:
+
+        flash(
+            "Please enter an email address.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("main.checkout")
+        )
+
+
+    if not address_line:
+
+        flash(
+            "Please enter the delivery address.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("main.checkout")
+        )
+
+
+    if not city or not state or not pincode:
+
+        flash(
+            "Please complete the delivery address.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("main.checkout")
+        )
+
+
+    # -----------------------------------------------------
+    # CART REVALIDATION
+    #
+    # Never trust prices or stock values coming from
+    # the browser.
+    # -----------------------------------------------------
+
+    subtotal = Decimal("0.00")
+
+    validated_items = []
+
+
+    for item in cart_items:
+
+        product = item.product
+        variant = item.product_size
+
+
+        if not product or not product.is_active:
+
+            flash(
+                "One of the products in your cart is no longer available.",
+                "danger"
+            )
+
+            return redirect(
+                url_for("main.cart")
+            )
+
+
+        # -------------------------------------------------
+        # VARIANT PRODUCT
+        # -------------------------------------------------
+
+        if variant:
+
+            current_price = Decimal(
+                str(variant.price)
+            )
+
+            available_stock = (
+                variant.quantity
+            )
+
+            variant_name = variant.size
+
+
+        # -------------------------------------------------
+        # NORMAL PRODUCT
+        # -------------------------------------------------
+
+        else:
+
+            current_price = Decimal(
+                str(product.price)
+            )
+
+            available_stock = (
+                product.stock_quantity
+            )
+
+            variant_name = None
+
+
+        # -------------------------------------------------
+        # STOCK CHECK
+        # -------------------------------------------------
+
+        if available_stock <= 0:
+
+            flash(
+                f"{product.name} is out of stock.",
+                "danger"
+            )
+
+            return redirect(
+                url_for("main.cart")
+            )
+
+
+        if item.quantity > available_stock:
+
+            flash(
+                f"Only {available_stock} item(s) of "
+                f"{product.name} are available.",
+                "warning"
+            )
+
+            return redirect(
+                url_for("main.cart")
+            )
+
+
+        item_total = (
+            current_price
+            * item.quantity
+        )
+
+
+        subtotal += item_total
+
+
+        validated_items.append(
+            {
+                "cart_item": item,
+                "product": product,
+                "variant": variant,
+                "variant_name": variant_name,
+                "price": current_price,
+                "quantity": item.quantity,
+                "total": item_total
+            }
+        )
+
+
+    # -----------------------------------------------------
+    # DELIVERY FEE
+    # -----------------------------------------------------
+
+    if subtotal < Decimal("1000.00"):
+
+        delivery_fee = Decimal("100.00")
+
+    else:
+
+        delivery_fee = Decimal("0.00")
+
+
+    total_amount = (
+        subtotal
+        + delivery_fee
+    )
+
+
+    # -----------------------------------------------------
+    # GENERATE ORDER NUMBER
+    # -----------------------------------------------------
+
+    order_number = (
+        "SE"
+        + datetime.now().strftime("%Y%m%d")
+        + "-"
+        + secrets.token_hex(3).upper()
+    )
+
+
+    # -----------------------------------------------------
+    # CREATE ORDER
+    # -----------------------------------------------------
+
+    try:
+
+        order = Order(
+            user_id=user_id,
+            order_number=order_number,
+
+            subtotal=subtotal,
+            delivery_fee=delivery_fee,
+            total_amount=total_amount,
+
+            # Payment is not implemented yet.
+            # Existing database requires COD.
+            payment_method="COD",
+
+            status="CONFIRMED",
+
+            shipping_full_name=full_name,
+            shipping_phone=phone,
+            shipping_email=email,
+            shipping_address_line=address_line,
+            shipping_city=city,
+            shipping_state=state,
+            shipping_pincode=pincode
+        )
+
+        db.session.add(order)
+
+        db.session.flush()
+
+
+        # -------------------------------------------------
+        # CREATE ORDER ITEMS + REDUCE STOCK
+        # -------------------------------------------------
+
+        for data in validated_items:
+
+            cart_item = data["cart_item"]
+            product = data["product"]
+            variant = data["variant"]
+
+
+            order_item = OrderItem(
+
+                order_id=order.id,
+
+                product_id=product.id,
+
+                product_size_id=(
+                    variant.id
+                    if variant
+                    else None
+                ),
+
+                product_name=product.name,
+
+                sku=product.sku,
+
+                variant_name=data["variant_name"],
+
+                quantity=data["quantity"],
+
+                unit_price=data["price"],
+
+                total_price=data["total"]
+            )
+
+
+            db.session.add(
+                order_item
+            )
+
+
+            # -------------------------------------------------
+            # REDUCE INVENTORY
+            # -------------------------------------------------
+
+            if variant:
+
+                variant.quantity -= (
+                    data["quantity"]
+                )
+
+            else:
+
+                product.stock_quantity -= (
+                    data["quantity"]
+                )
+
+
+            # -------------------------------------------------
+            # REMOVE CART ITEM
+            # -------------------------------------------------
+
+            db.session.delete(
+                cart_item
+            )
+
+
+        db.session.commit()
+
+
+    except Exception as error:
+
+        db.session.rollback()
+
+        current_app.logger.exception(
+            "ORDER CREATION FAILED: %s",
+            error
+        )
+
+        flash(
+            "Unable to place your order right now. "
+            "Please try again.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("main.checkout")
+        )
+
+
+    # -----------------------------------------------------
+    # ORDER SUCCESS
+    # -----------------------------------------------------
+
+    return redirect(
+        url_for(
+            "main.order_confirmation",
+            order_number=order.order_number
+        )
     )

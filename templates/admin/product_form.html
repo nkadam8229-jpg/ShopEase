@@ -16,7 +16,7 @@
 
     <div class="row justify-content-center">
 
-        <div class="col-lg-9">
+        <div class="col-lg-12">
 
             <div class="d-flex justify-content-between align-items-center mb-4">
 
@@ -317,7 +317,7 @@
 
                             <!-- Stock / Size Inventory -->
 
-<div class="col-md-6 mb-4">
+<div class="col-md-12 mb-4">
 
     <label class="form-label fw-semibold">
         Inventory
@@ -383,41 +383,29 @@
         style="display: none;"
     >
 
-        <div class="table-responsive border rounded">
+<div class="variant-inventory-wrapper border rounded">
 
-            <div class="table-responsive">
-    <table class="table table-bordered mb-0">
+    <table
+        class="table table-bordered mb-0 align-middle variant-inventory-table"
+        id="sizeInventoryTable"
+    >
 
-                <thead class="table-light">
+        <thead class="table-light">
+            <tr>
+                <th class="variant-col">Size / Variant</th>
+                <th class="price-col">Price</th>
+                <th class="quantity-col">Quantity</th>
+                <th class="description-col">Description</th>
+                <th class="specifications-col">Specifications</th>
+                <th class="action-col"></th>
+            </tr>
+        </thead>
 
-    <tr>
+        <tbody id="sizeInventoryBody"></tbody>
 
-        <th style="width: 45%;">
-            Size / Variant
-        </th>
+    </table>
 
-        <th style="width: 45%;">
-            Price
-        </th>
-
-        <th style="width: 18%;">
-            Quantity
-        </th>
-
-        <th style="width: 7px;">
-        </th>
-
-    </tr>
-
-</thead>
-
-                <tbody id="sizeInventoryBody">
-                </tbody>
-
-            </table>
-            </div>
-
-        </div>
+</div>
 
 
         <button
@@ -696,6 +684,87 @@
 
 </div>
 
+
+
+<style>
+/* =========================================================
+   SIZE / VARIANT INVENTORY
+   Full-width layout with clear independent fields
+========================================================= */
+
+.variant-inventory-wrapper {
+    width: 100%;
+    overflow: hidden;
+}
+
+.variant-inventory-table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+}
+
+.variant-inventory-table th,
+.variant-inventory-table td {
+    vertical-align: middle;
+    padding: 12px;
+}
+
+.variant-inventory-table th {
+    white-space: nowrap;
+}
+
+.variant-inventory-table .variant-col {
+    width: 16%;
+}
+
+.variant-inventory-table .price-col {
+    width: 15%;
+}
+
+.variant-inventory-table .quantity-col {
+    width: 11%;
+}
+
+.variant-inventory-table .description-col {
+    width: 27%;
+}
+
+.variant-inventory-table .specifications-col {
+    width: 27%;
+}
+
+.variant-inventory-table .action-col {
+    width: 4%;
+}
+
+.variant-inventory-table textarea {
+    width: 100%;
+    min-height: 112px;
+    resize: vertical;
+}
+
+.variant-inventory-table input {
+    width: 100%;
+}
+
+.variant-remove-btn {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    font-size: 20px;
+    line-height: 1;
+}
+
+@media (max-width: 992px) {
+    .variant-inventory-wrapper {
+        overflow-x: auto;
+    }
+
+    .variant-inventory-table {
+        min-width: 1050px;
+    }
+}
+</style>
 
 <script>
 
@@ -1445,236 +1514,207 @@ document.addEventListener(
 
 
     function addSizeRow(
+    variantId = "",
     size = "",
     price = "",
     quantity = 0,
+    description = "",
+    specifications = "",
     priceReadOnly = false
 ) {
 
-    const row =
-        document.createElement("tr");
-
+    const row = document.createElement("tr");
 
     /* -----------------------------------------
-       SIZE / VARIANT CELL
+       EXISTING VARIANT ID
     ----------------------------------------- */
 
-    const sizeCell =
-        document.createElement("td");
+    const variantIdInput = document.createElement("input");
 
-
-    const sizeInput =
-        document.createElement("input");
-
-    sizeInput.type =
-        "text";
-
-    sizeInput.className =
-        "form-control";
-
-    sizeInput.name =
-        "size_name[]";
-
-    sizeInput.placeholder =
-        "Example: S, M, L or UK 8";
-
-    sizeInput.value =
-        size;
-
+    variantIdInput.type = "hidden";
+    variantIdInput.name = "product_size_id[]";
+    variantIdInput.value = variantId || "";
 
     /* -----------------------------------------
-       PRICE CELL
+       NORMALIZE VARIANT SPECIFICATIONS
+       Existing DB JSON objects are converted
+       to readable key/value text for editing.
     ----------------------------------------- */
 
-    const priceCell =
-        document.createElement("td");
+    let specificationText = "";
 
+    if (specifications) {
 
-    const priceWrapper =
-        document.createElement("div");
+        if (typeof specifications === "object") {
 
-    priceWrapper.className =
-        "input-group";
+            specificationText =
+                Object.entries(specifications)
+                    .map(
+                        function ([key, value]) {
+                            return key + ": " + value;
+                        }
+                    )
+                    .join("\n");
 
+        } else {
 
-    const pricePrefix =
-        document.createElement("span");
+            specificationText = String(
+                specifications
+            );
 
-    pricePrefix.className =
-        "input-group-text";
+        }
 
-    pricePrefix.textContent =
-        "₹";
-
-
-    const priceInput =
-        document.createElement("input");
-
-    priceInput.type =
-        "number";
-
-    priceInput.className =
-        "form-control";
-
-    priceInput.name =
-        "size_price[]";
-
-    priceInput.min =
-        "0.01";
-
-    priceInput.step =
-        "0.01";
-
-    priceInput.placeholder =
-        "0.00";
-
-    priceInput.value =
-        price;
-
-
-    /*
-     * Existing product variant prices are displayed
-     * but are read-only for now.
-     *
-     * Variant price editing will be implemented later.
-     */
-    
-
-    priceWrapper.appendChild(
-        pricePrefix
-    );
-
-    priceWrapper.appendChild(
-        priceInput
-    );
-
-    priceCell.appendChild(
-        priceWrapper
-    );
-
+    }
 
     /* -----------------------------------------
-       QUANTITY CELL
+       SIZE / VARIANT
     ----------------------------------------- */
 
-    const quantityCell =
-        document.createElement("td");
+    const sizeCell = document.createElement("td");
 
+    const sizeInput = document.createElement("input");
 
-    const quantityInput =
-        document.createElement("input");
+    sizeInput.type = "text";
+    sizeInput.className = "form-control";
+    sizeInput.name = "size_name[]";
+    sizeInput.placeholder = "e.g. 24/1TB";
+    sizeInput.value = size;
 
-    quantityInput.type =
-        "number";
-
-    quantityInput.className =
-        "form-control size-quantity";
-
-    quantityInput.name =
-        "size_quantity[]";
-
-    quantityInput.min =
-        "0";
-
-    quantityInput.step =
-        "1";
-
-    quantityInput.value =
-        quantity;
-
+    sizeCell.appendChild(variantIdInput);
+    sizeCell.appendChild(sizeInput);
 
     /* -----------------------------------------
-       ACTION CELL
+       PRICE
     ----------------------------------------- */
 
-    const actionCell =
-        document.createElement("td");
+    const priceCell = document.createElement("td");
 
-    actionCell.className =
-        "text-center align-middle";
+    const priceWrapper = document.createElement("div");
+    priceWrapper.className = "input-group";
 
+    const pricePrefix = document.createElement("span");
+    pricePrefix.className = "input-group-text";
+    pricePrefix.textContent = "₹";
 
-    const removeButton =
-        document.createElement("button");
+    const priceInput = document.createElement("input");
 
-    removeButton.type =
-        "button";
+    priceInput.type = "number";
+    priceInput.className = "form-control";
+    priceInput.name = "size_price[]";
+    priceInput.min = "0.01";
+    priceInput.step = "0.01";
+    priceInput.placeholder = "0.00";
+    priceInput.value = price;
 
+    if (priceReadOnly) {
+        priceInput.readOnly = true;
+    }
+
+    priceWrapper.appendChild(pricePrefix);
+    priceWrapper.appendChild(priceInput);
+    priceCell.appendChild(priceWrapper);
+
+    /* -----------------------------------------
+       QUANTITY
+    ----------------------------------------- */
+
+    const quantityCell = document.createElement("td");
+
+    const quantityInput = document.createElement("input");
+
+    quantityInput.type = "number";
+    quantityInput.className = "form-control size-quantity";
+    quantityInput.name = "size_quantity[]";
+    quantityInput.min = "0";
+    quantityInput.step = "1";
+    quantityInput.value = quantity;
+
+    quantityCell.appendChild(quantityInput);
+
+    /* -----------------------------------------
+       DESCRIPTION
+    ----------------------------------------- */
+
+    const descriptionCell = document.createElement("td");
+
+    const descriptionInput = document.createElement("textarea");
+
+    descriptionInput.className = "form-control";
+    descriptionInput.name = "size_description[]";
+    descriptionInput.rows = 4;
+    descriptionInput.placeholder =
+        "Optional variant-specific description";
+    descriptionInput.value = description || "";
+
+    descriptionCell.appendChild(descriptionInput);
+
+    /* -----------------------------------------
+       SPECIFICATIONS
+    ----------------------------------------- */
+
+    const specificationCell = document.createElement("td");
+
+    const specificationInput = document.createElement("textarea");
+
+    specificationInput.className = "form-control";
+    specificationInput.name = "size_specifications[]";
+    specificationInput.rows = 4;
+    specificationInput.placeholder =
+        "Processor: Apple M5 Pro\nRAM: 24GB\nStorage: 1TB\nGPU: 16-core";
+    specificationInput.value = specificationText;
+
+    specificationCell.appendChild(specificationInput);
+
+    /* -----------------------------------------
+       REMOVE
+    ----------------------------------------- */
+
+    const actionCell = document.createElement("td");
+    actionCell.className = "text-center align-middle";
+
+    const removeButton = document.createElement("button");
+
+    removeButton.type = "button";
     removeButton.className =
-        "btn btn-outline-danger btn-sm";
+        "btn btn-outline-danger btn-sm variant-remove-btn";
+    removeButton.textContent = "×";
+    removeButton.title = "Remove variant";
+    removeButton.setAttribute(
+        "aria-label",
+        "Remove variant"
+    );
 
-    removeButton.textContent =
-        "×";
-
-    removeButton.title =
-        "Remove size / variant";
-
+    actionCell.appendChild(removeButton);
 
     /* -----------------------------------------
        BUILD ROW
     ----------------------------------------- */
 
-    sizeCell.appendChild(
-        sizeInput
-    );
+    row.appendChild(sizeCell);
+    row.appendChild(priceCell);
+    row.appendChild(quantityCell);
+    row.appendChild(descriptionCell);
+    row.appendChild(specificationCell);
+    row.appendChild(actionCell);
 
-    quantityCell.appendChild(
-        quantityInput
-    );
-
-    actionCell.appendChild(
-        removeButton
-    );
-
-
-    row.appendChild(
-        sizeCell
-    );
-
-    row.appendChild(
-        priceCell
-    );
-
-    row.appendChild(
-        quantityCell
-    );
-
-    row.appendChild(
-        actionCell
-    );
-
-
-    sizeInventoryBody.appendChild(
-        row
-    );
-
+    sizeInventoryBody.appendChild(row);
 
     /* -----------------------------------------
        EVENTS
     ----------------------------------------- */
-
-    sizeInput.addEventListener(
-        "input",
-        calculateSizeTotal
-    );
 
     quantityInput.addEventListener(
         "input",
         calculateSizeTotal
     );
 
-
     removeButton.addEventListener(
         "click",
         function () {
-
             row.remove();
-
             calculateSizeTotal();
-
         }
     );
-
 }
 
         /* -----------------------------------------
@@ -1683,18 +1723,21 @@ document.addEventListener(
 
         {% if product and product.sizes %}
 
-        {% for product_size in product.sizes %}
+{% for product_size in product.sizes %}
 
-        addSizeRow(
-            {{ product_size.size | tojson }},
-            {{ product_size.price }},
-            {{ product_size.quantity }},
-            false
-        );
+addSizeRow(
+    {{ product_size.id }},
+    {{ product_size.size | tojson }},
+    {{ product_size.price }},
+    {{ product_size.quantity }},
+    {{ product_size.description | tojson }},
+    {{ product_size.specifications | tojson }},
+    false
+);
 
-        {% endfor %}
+{% endfor %}
 
-        {% endif %}
+{% endif %}
 
         function toggleSizeInventory() {
 

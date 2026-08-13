@@ -1226,17 +1226,75 @@ def cart():
     )
 
     # -----------------------------------------------------
-    # CALCULATE TOTAL
+    # CALCULATE TOTAL + CHECK CURRENT STOCK
     # -----------------------------------------------------
 
     cart_total = 0
 
     for item in cart_items:
 
+        # -------------------------------------------------
+        # CURRENT PRICE
+        #
+        # Variant products use the current variant price.
+        # Normal products use the current product price.
+        # -------------------------------------------------
+
         if item.product_size:
-            item_price = item.product_size.price
+
+            item_price = (
+                item.product_size.price
+            )
+
         else:
-            item_price = item.product.price
+
+            item_price = (
+                item.product.price
+            )
+
+
+        # -------------------------------------------------
+        # CURRENT AVAILABLE STOCK
+        #
+        # Variant products use the current variant quantity.
+        # Normal products use the current product stock.
+        # -------------------------------------------------
+
+        if item.product_size:
+
+            available_stock = (
+                item.product_size.quantity
+            )
+
+        else:
+
+            available_stock = (
+                item.product.stock_quantity
+            )
+
+
+        # -------------------------------------------------
+        # STOCK STATUS
+        #
+        # Do not automatically change the cart quantity.
+        # We only mark the item so the template can display
+        # a warning.
+        # -------------------------------------------------
+
+        item.stock_issue = False
+
+        if available_stock <= 0:
+
+            item.stock_issue = True
+
+        elif item.quantity > available_stock:
+
+            item.stock_issue = True
+
+
+        # -------------------------------------------------
+        # ITEM SUBTOTAL
+        # -------------------------------------------------
 
         item.subtotal = (
             item_price * item.quantity
@@ -1252,4 +1310,231 @@ def cart():
         "cart.html",
         cart_items=cart_items,
         cart_total=cart_total
+    )
+
+
+    # =========================================================
+# UPDATE CART QUANTITY
+# =========================================================
+
+@main_bp.route(
+    "/cart/update/<int:cart_item_id>",
+    methods=["POST"]
+)
+def update_cart_quantity(cart_item_id):
+
+    # -----------------------------------------------------
+    # LOGIN REQUIRED
+    # -----------------------------------------------------
+
+    user_id = session.get("user_id")
+
+    if not user_id:
+
+        flash(
+            "Please login to update your cart.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("auth.login")
+        )
+
+
+    # -----------------------------------------------------
+    # CART ITEM
+    #
+    # Only allow the logged-in user to update their own
+    # cart item.
+    # -----------------------------------------------------
+
+    cart_item = (
+        CartItem.query
+        .filter_by(
+            id=cart_item_id,
+            user_id=user_id
+        )
+        .first()
+    )
+
+    if not cart_item:
+
+        flash(
+            "Cart item not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("main.cart")
+        )
+
+
+    # -----------------------------------------------------
+    # NEW QUANTITY
+    # -----------------------------------------------------
+
+    quantity = request.form.get(
+        "quantity",
+        type=int
+    )
+
+
+    if not quantity or quantity < 1:
+
+        flash(
+            "Quantity must be at least 1.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("main.cart")
+        )
+
+
+    # -----------------------------------------------------
+    # AVAILABLE STOCK
+    #
+    # Variant products use variant quantity.
+    # Normal products use product stock_quantity.
+    # -----------------------------------------------------
+
+    if cart_item.product_size:
+
+        available_stock = (
+            cart_item.product_size.quantity
+        )
+
+    else:
+
+        available_stock = (
+            cart_item.product.stock_quantity
+        )
+
+
+    # -----------------------------------------------------
+    # OUT OF STOCK
+    # -----------------------------------------------------
+
+    if available_stock <= 0:
+
+        flash(
+            "This item is currently out of stock.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("main.cart")
+        )
+
+
+    # -----------------------------------------------------
+    # STOCK LIMIT
+    # -----------------------------------------------------
+
+    if quantity > available_stock:
+
+        flash(
+            f"Only {available_stock} item(s) are available.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("main.cart")
+        )
+
+
+    # -----------------------------------------------------
+    # UPDATE QUANTITY
+    # -----------------------------------------------------
+
+    cart_item.quantity = quantity
+
+    db.session.commit()
+
+
+    flash(
+        "Cart quantity updated.",
+        "success"
+    )
+
+
+    return redirect(
+        url_for("main.cart")
+    )
+
+# =========================================================
+# REMOVE CART ITEM
+# =========================================================
+
+@main_bp.route(
+    "/cart/remove/<int:cart_item_id>",
+    methods=["POST"]
+)
+def remove_cart_item(cart_item_id):
+
+    # -----------------------------------------------------
+    # LOGIN REQUIRED
+    # -----------------------------------------------------
+
+    user_id = session.get("user_id")
+
+    if not user_id:
+
+        flash(
+            "Please login to manage your cart.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("auth.login")
+        )
+
+
+    # -----------------------------------------------------
+    # CART ITEM
+    #
+    # Only allow the logged-in user to remove their own
+    # cart item.
+    # -----------------------------------------------------
+
+    cart_item = (
+        CartItem.query
+        .filter_by(
+            id=cart_item_id,
+            user_id=user_id
+        )
+        .first()
+    )
+
+    if not cart_item:
+
+        flash(
+            "Cart item not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("main.cart")
+        )
+
+
+    # -----------------------------------------------------
+    # REMOVE CART ITEM
+    # -----------------------------------------------------
+
+    db.session.delete(
+        cart_item
+    )
+
+    db.session.commit()
+
+
+    flash(
+        "Item removed from cart.",
+        "success"
+    )
+
+
+    return redirect(
+        url_for("main.cart")
     )

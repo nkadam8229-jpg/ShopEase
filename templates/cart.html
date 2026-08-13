@@ -18,6 +18,34 @@
         </a>
     </div>
 
+        <!-- CART FLASH MESSAGES -->
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+
+        {% if messages %}
+
+            {% for category, message in messages %}
+
+                <div
+                    class="alert alert-{{ category }} alert-dismissible fade show"
+                    role="alert"
+                >
+                    {{ message }}
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="alert"
+                        aria-label="Close"
+                    ></button>
+
+                </div>
+
+            {% endfor %}
+
+        {% endif %}
+
+    {% endwith %}
 
     {% if cart_items %}
 
@@ -69,48 +97,138 @@
                         </div>
 
 
-                        <!-- PRODUCT DETAILS -->
+                         <!-- PRODUCT DETAILS -->
                         <div class="col-9 col-md-5">
 
                             <h5 class="fw-semibold mb-1">
                                 {{ item.product.name }}
                             </h5>
 
+
                             {% if item.product_size %}
 
-                            <div class="text-muted small mb-1">
-                                Size / Variant:
-                                <strong>
-                                    {{ item.product_size.size }}
-                                </strong>
-                            </div>
+                                <div class="text-muted small mb-1">
+
+                                    Size / Variant:
+
+                                    <strong>
+                                        {{ item.product_size.size }}
+                                    </strong>
+
+                                </div>
 
                             {% endif %}
 
+
+                            <!-- STOCK WARNING -->
+
+                            {% if item.stock_issue %}
+
+                                <div class="alert alert-warning py-2 mb-2">
+
+                                    {% if item.product_size and item.product_size.quantity <= 0 %}
+
+                                        This variant is currently out of stock.
+                                        Please remove it or wait for stock to be available.
+
+                                    {% elif not item.product_size and item.product.stock_quantity <= 0 %}
+
+                                        This product is currently out of stock.
+                                        Please remove it or wait for stock to be available.
+
+                                    {% elif item.product_size %}
+
+                                        Only
+                                        <strong>
+                                            {{ item.product_size.quantity }}
+                                        </strong>
+                                        item(s) of this variant are currently available.
+                                        Please reduce the quantity.
+
+                                    {% else %}
+
+                                        Only
+                                        <strong>
+                                            {{ item.product.stock_quantity }}
+                                        </strong>
+                                        item(s) are currently available.
+                                        Please reduce the quantity.
+
+                                    {% endif %}
+
+                                </div>
+
+                            {% endif %}
+
+
                             <div class="text-muted small">
+
                                 Price:
+
                                 ₹{{ "%.2f"|format(
                                     item.product_size.price
                                     if item.product_size
                                     else item.product.price
                                 ) }}
+
                             </div>
 
                         </div>
-
 
                         <!-- QUANTITY -->
-                        <div class="col-5 col-md-2">
+<div class="col-5 col-md-2">
 
-                            <label class="small text-muted d-block mb-1">
-                                Quantity
-                            </label>
+    <label class="small text-muted d-block mb-1">
+        Quantity
+    </label>
 
-                            <div class="border rounded px-3 py-2 text-center">
-                                {{ item.quantity }}
-                            </div>
+<form
+    method="POST"
+    action="{{ url_for(
+        'main.update_cart_quantity',
+        cart_item_id=item.id
+    ) }}"
+>
 
-                        </div>
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}"
+    >
+
+    <div class="d-flex align-items-center">
+
+        <button
+            type="submit"
+            name="quantity"
+            value="{{ item.quantity - 1 }}"
+            class="btn btn-outline-secondary btn-sm"
+            {% if item.quantity <= 1 %}disabled{% endif %}
+        >
+            −
+        </button>
+
+        <div
+            class="border-top border-bottom px-3 py-1 text-center"
+            style="min-width: 45px;"
+        >
+            {{ item.quantity }}
+        </div>
+
+        <button
+            type="submit"
+            name="quantity"
+            value="{{ item.quantity + 1 }}"
+            class="btn btn-outline-secondary btn-sm"
+        >
+            +
+        </button>
+
+    </div>
+
+</form>
+
+</div>
 
 
                         <!-- SUBTOTAL -->
@@ -128,18 +246,33 @@
 
 
                         <!-- REMOVE -->
-                        <div class="col-2 col-md-1 text-end">
+<div class="col-2 col-md-1 text-end">
 
-                            <button
-                                type="button"
-                                class="btn btn-outline-danger btn-sm"
-                                disabled
-                                title="Remove will be added next"
-                            >
-                                ×
-                            </button>
+    <form
+        method="POST"
+        action="{{ url_for(
+            'main.remove_cart_item',
+            cart_item_id=item.id
+        ) }}"
+    >
 
-                        </div>
+        <input
+            type="hidden"
+            name="csrf_token"
+            value="{{ csrf_token() }}"
+        >
+
+        <button
+            type="submit"
+            class="btn btn-outline-danger btn-sm"
+            title="Remove item"
+        >
+            ×
+        </button>
+
+    </form>
+
+</div>
 
                     </div>
 

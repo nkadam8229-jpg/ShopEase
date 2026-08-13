@@ -440,6 +440,16 @@ class ProductSize(db.Model):
         default=0
     )
 
+    description = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    specifications = db.Column(
+        db.JSON,
+        nullable=True
+    )
+    
     created_at = db.Column(
         db.DateTime,
         nullable=False,

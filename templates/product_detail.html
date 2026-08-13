@@ -255,6 +255,8 @@
                                         data-price="{{ variant.price }}"
                                         data-quantity="{{ variant.quantity }}"
                                         data-variant-id="{{ variant.id }}"
+                                        data-description='{{ (variant.description or "") | tojson }}'
+                                        data-specifications='{{ (variant.specifications or {}) | tojson }}'
                                         onclick="selectVariant(this)"
                                         {% if variant.quantity <= 0 %}
                                             disabled
@@ -312,26 +314,25 @@
                          DESCRIPTION
                     ================================================== -->
 
-                    {% if product.description %}
+                    <div
+                        class="mb-4"
+                        id="productDescriptionSection"
+                        {% if not product.description and not product.sizes %}
+                            style="display: none;"
+                        {% endif %}
+                    >
 
-                        <div
-                            class="mb-4"
-                        >
+                        <h5 class="fw-semibold">
+                            Description
+                        </h5>
 
-                            <h5 class="fw-semibold">
-                                Description
-                            </h5>
+                        <p
+                            class="text-muted"
+                            id="productDescription"
+                            style="white-space: pre-line;"
+                        >{{ product.description or "" }}</p>
 
-                            <p
-                                class="text-muted"
-                                style="white-space: pre-line;"
-                            >
-                                {{ product.description }}
-                            </p>
-
-                        </div>
-
-                    {% endif %}
+                    </div>
 
 
                     <!-- =================================================
@@ -517,31 +518,34 @@
              SPECIFICATIONS
         ================================================== -->
 
-        {% if product.specifications %}
+        <div
+            class="product-specifications mt-5"
+            id="productSpecificationsSection"
+            {% if not product.specifications and not product.sizes %}
+                style="display: none;"
+            {% endif %}
+        >
+
+            <h3
+                class="fw-bold mb-4"
+            >
+                Specifications
+            </h3>
 
             <div
-                class="product-specifications mt-5"
+                class="table-responsive"
+                id="productSpecificationsTable"
             >
-
-                <h3
-                    class="fw-bold mb-4"
+                <table
+                    class="table table-bordered align-middle"
                 >
-                    Specifications
-                </h3>
+                    <tbody id="productSpecificationsBody">
 
-
-                <div class="table-responsive">
-
-                    <table
-                        class="table table-bordered align-middle"
-                    >
-
-                        <tbody>
+                        {% if product.specifications %}
 
                             {% for key, value in product.specifications.items() %}
 
                                 <tr>
-
                                     <th
                                         style="width: 30%;"
                                         class="bg-light"
@@ -552,20 +556,17 @@
                                     <td>
                                         {{ value }}
                                     </td>
-
                                 </tr>
 
                             {% endfor %}
 
-                        </tbody>
+                        {% endif %}
 
-                    </table>
-
-                </div>
-
+                    </tbody>
+                </table>
             </div>
 
-        {% endif %}
+        </div>
 
 
         <!-- =================================================
@@ -742,6 +743,66 @@ function changeProductImage(imageUrl, button) {
 }
 
 
+function renderVariantSpecifications(specifications) {
+
+    const section =
+        document.getElementById(
+            "productSpecificationsSection"
+        );
+
+    const body =
+        document.getElementById(
+            "productSpecificationsBody"
+        );
+
+    if (!section || !body) {
+        return;
+    }
+
+    body.innerHTML = "";
+
+    if (
+        !specifications ||
+        typeof specifications !== "object" ||
+        Object.keys(specifications).length === 0
+    ) {
+        section.style.display = "none";
+        return;
+    }
+
+    Object.entries(specifications).forEach(
+        function ([key, value]) {
+
+            const row =
+                document.createElement("tr");
+
+            const keyCell =
+                document.createElement("th");
+
+            keyCell.style.width = "30%";
+            keyCell.className = "bg-light";
+            keyCell.textContent = key;
+
+            const valueCell =
+                document.createElement("td");
+
+            valueCell.textContent =
+                value === null ||
+                value === undefined
+                    ? ""
+                    : value;
+
+            row.appendChild(keyCell);
+            row.appendChild(valueCell);
+
+            body.appendChild(row);
+        }
+    );
+
+    section.style.display = "";
+}
+
+
 function selectVariant(button) {
 
     document
@@ -763,17 +824,19 @@ function selectVariant(button) {
         "active"
     );
 
+
     const selectedVariantInput =
-    document.getElementById(
-        "selectedVariantId"
-    );
+        document.getElementById(
+            "selectedVariantId"
+        );
 
-if (selectedVariantInput) {
 
-    selectedVariantInput.value =
-        button.dataset.variantId;
+    if (selectedVariantInput) {
 
-}
+        selectedVariantInput.value =
+            button.dataset.variantId;
+
+    }
 
 
     const price =
@@ -816,21 +879,29 @@ if (selectedVariantInput) {
 
     if (stockElement) {
 
-        if (quantity > 0) {
-
-            stockElement.textContent =
-                quantity + " available";
-
-            stockElement.className =
-                "small mt-2 text-success";
-
-        } else {
+        if (quantity <= 0) {
 
             stockElement.textContent =
                 "Out of stock";
 
             stockElement.className =
                 "small mt-2 text-danger";
+
+        } else if (quantity <= 10) {
+
+            stockElement.textContent =
+                "Only " + quantity + " left";
+
+            stockElement.className =
+                "small mt-2 text-warning";
+
+        } else {
+
+            stockElement.textContent =
+                "";
+
+            stockElement.className =
+                "small mt-2";
 
         }
 
@@ -852,6 +923,115 @@ if (selectedVariantInput) {
     }
 
 
+    /* -------------------------------------------------
+       DESCRIPTION FALLBACK
+
+       Variant description → use it.
+       Empty variant description → use common product
+       description.
+    ------------------------------------------------- */
+
+    const descriptionSection =
+        document.getElementById(
+            "productDescriptionSection"
+        );
+
+    const descriptionElement =
+        document.getElementById(
+            "productDescription"
+        );
+
+
+    if (
+        descriptionSection &&
+        descriptionElement
+    ) {
+
+        let variantDescription = "";
+
+        try {
+
+            variantDescription =
+                JSON.parse(
+                    button.dataset.description || '""'
+                );
+
+        } catch (error) {
+
+            variantDescription =
+                button.dataset.description || "";
+
+        }
+
+
+        const commonDescription =
+            {{ (product.description or "") | tojson }};
+
+
+        const finalDescription =
+            (
+                variantDescription &&
+                String(variantDescription).trim()
+            )
+                ? variantDescription
+                : commonDescription;
+
+
+        descriptionElement.textContent =
+            finalDescription || "";
+
+
+        descriptionSection.style.display =
+            finalDescription
+                ? ""
+                : "none";
+
+    }
+
+
+    /* -------------------------------------------------
+       SPECIFICATION FALLBACK
+
+       Variant specifications → use them.
+       Empty variant specifications → use common
+       product specifications.
+    ------------------------------------------------- */
+
+    let variantSpecifications = {};
+
+    try {
+
+        variantSpecifications =
+            JSON.parse(
+                button.dataset.specifications || "{}"
+            );
+
+    } catch (error) {
+
+        variantSpecifications = {};
+
+    }
+
+
+    const commonSpecifications =
+        {{ (product.specifications or {}) | tojson }};
+
+
+    const finalSpecifications =
+        (
+            variantSpecifications &&
+            typeof variantSpecifications === "object" &&
+            Object.keys(variantSpecifications).length > 0
+        )
+            ? variantSpecifications
+            : commonSpecifications;
+
+
+    renderVariantSpecifications(
+        finalSpecifications
+    );
+
+
     const quantityInput =
         document.getElementById(
             "productQuantity"
@@ -867,6 +1047,19 @@ if (selectedVariantInput) {
                 quantity,
                 1
             );
+
+    }
+
+
+    const cartQuantity =
+        document.getElementById(
+            "cartQuantity"
+        );
+
+
+    if (cartQuantity) {
+
+        cartQuantity.value = 1;
 
     }
 
@@ -931,12 +1124,15 @@ document.addEventListener(
     "DOMContentLoaded",
     function () {
 
+        // Variant products are initialized below. For products
+        // without variants, the common product description and
+        // specifications already rendered by the template remain visible.
+
         const firstVariant =
             document.querySelector(
                 ".product-variant-button.active"
             );
 
-        
 
         if (firstVariant) {
 
@@ -946,29 +1142,74 @@ document.addEventListener(
 
         }
 
+
         const quantityInput =
-    document.getElementById(
-        "productQuantity"
-    );
+            document.getElementById(
+                "productQuantity"
+            );
 
-const cartQuantity =
-    document.getElementById(
-        "cartQuantity"
-    );
+        const cartQuantity =
+            document.getElementById(
+                "cartQuantity"
+            );
 
-if (
-    quantityInput &&
-    cartQuantity
-) {
 
-    cartQuantity.value =
-        quantityInput.value;
+        if (
+            quantityInput &&
+            cartQuantity
+        ) {
 
-}
+            // Keep hidden cart quantity synchronized
+            // when customer types directly.
+            quantityInput.addEventListener(
+                "input",
+                function () {
+
+                    let quantity =
+                        parseInt(
+                            quantityInput.value
+                        ) || 1;
+
+
+                    const max =
+                        parseInt(
+                            quantityInput.max
+                        ) || 999;
+
+
+                    if (quantity < 1) {
+
+                        quantity = 1;
+
+                    }
+
+
+                    if (quantity > max) {
+
+                        quantity = max;
+
+                    }
+
+
+                    quantityInput.value =
+                        quantity;
+
+
+                    cartQuantity.value =
+                        quantity;
+
+                }
+            );
+
+
+            // Initial synchronization.
+            cartQuantity.value =
+                quantityInput.value;
+
+        }
 
     }
 );
-
 </script>
 
 {% endblock %}

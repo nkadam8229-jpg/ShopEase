@@ -1705,7 +1705,276 @@ def products():
 # PRODUCT SIZE VALIDATION
 # =========================================================
 
+def parse_variant_specifications(
+    raw_specifications,
+    variant_name
+):
+    """
+    Convert the admin variant specification textarea into
+    a JSON-compatible dictionary.
+
+    Expected format:
+
+    Processor: Intel Core i7
+    GPU: RTX 4050
+    RAM: 16GB
+    Storage: 1TB
+    """
+
+    specifications = {}
+
+    if not raw_specifications:
+        return None
+
+    for line in raw_specifications.splitlines():
+
+        line = line.strip()
+
+        if not line:
+            continue
+
+        if ":" not in line:
+
+            raise ValueError(
+                f"Invalid specification format for "
+                f"variant '{variant_name}'. "
+                f"Use 'Name: Value' on each line."
+            )
+
+        key, value = line.split(
+            ":",
+            1
+        )
+
+        key = key.strip()
+        value = value.strip()
+
+        if not key or not value:
+
+            raise ValueError(
+                f"Invalid specification format for "
+                f"variant '{variant_name}'. "
+                f"Both name and value are required."
+            )
+
+        specifications[key] = value
+
+    if not specifications:
+        return None
+
+    return specifications
+
 def get_product_sizes_from_form():
+
+    product_size_ids = request.form.getlist(
+        "product_size_id[]"
+    )
+    size_names = request.form.getlist(
+        "size_name[]"
+    )
+
+    size_prices = request.form.getlist(
+        "size_price[]"
+    )
+
+    size_quantities = request.form.getlist(
+        "size_quantity[]"
+    )
+
+    size_descriptions = request.form.getlist(
+        "size_description[]"
+    )
+
+    size_specifications = request.form.getlist(
+        "size_specifications[]"
+    )
+
+    if (
+    len(product_size_ids)
+    != len(size_names)
+    or
+    len(size_names)
+    != len(size_prices)
+    or
+    len(size_names)
+    != len(size_quantities)
+    or
+    len(size_names)
+    != len(size_descriptions)
+    or
+    len(size_names)
+    != len(size_specifications)
+):
+
+        raise ValueError(
+            "Invalid size / variant inventory data."
+        )
+
+    sizes = []
+    used_sizes = set()
+
+    for (
+        raw_product_size_id,
+        raw_name,
+        raw_price,
+        raw_quantity,
+        raw_description,
+        raw_specifications
+    ) in zip(
+        product_size_ids,
+        size_names,
+        size_prices,
+        size_quantities,
+        size_descriptions,
+        size_specifications
+    ):
+
+        size = raw_name.strip()
+
+        # -------------------------------------------------
+        # EXISTING VARIANT ID
+        # -------------------------------------------------
+
+        product_size_id = (
+            int(raw_product_size_id)
+            if raw_product_size_id.strip()
+            else None
+        )
+
+        # Ignore completely empty rows.
+        if not size:
+            continue
+
+        normalized_size = size.lower()
+
+        # -------------------------------------------------
+        # DUPLICATE SIZE / VARIANT VALIDATION
+        # -------------------------------------------------
+
+        if normalized_size in used_sizes:
+
+            raise ValueError(
+                f"Duplicate size / variant "
+                f"'{size}' is not allowed."
+            )
+
+        used_sizes.add(
+            normalized_size
+        )
+
+
+        # -------------------------------------------------
+        # VARIANT PRICE
+        # -------------------------------------------------
+
+        try:
+
+            price = float(
+                raw_price
+            )
+
+        except (
+            ValueError,
+            TypeError
+        ):
+
+            raise ValueError(
+                f"Invalid price for "
+                f"size / variant '{size}'."
+            )
+
+        if price <= 0:
+
+            raise ValueError(
+                f"Price for size / variant "
+                f"'{size}' must be greater than 0."
+            )
+
+
+        # -------------------------------------------------
+        # VARIANT QUANTITY
+        # -------------------------------------------------
+
+        try:
+
+            quantity = int(
+                raw_quantity
+            )
+
+        except (
+            ValueError,
+            TypeError
+        ):
+
+            raise ValueError(
+                f"Invalid quantity for "
+                f"size / variant '{size}'."
+            )
+
+        if quantity < 0:
+
+            raise ValueError(
+                f"Quantity for size / variant "
+                f"'{size}' cannot be negative."
+            )
+
+
+        # -------------------------------------------------
+        # VARIANT DESCRIPTION
+        # -------------------------------------------------
+
+        description = (
+            raw_description.strip()
+            or None
+        )
+
+
+        # -------------------------------------------------
+        # VARIANT SPECIFICATIONS
+        # -------------------------------------------------
+
+        specifications = (
+            parse_variant_specifications(
+                raw_specifications,
+                size
+            )
+        )
+
+        # -------------------------------------------------
+        # ADD VARIANT
+        # -------------------------------------------------
+
+        sizes.append(
+            {
+                "product_size_id": product_size_id,
+                "size": size,
+                "price": price,
+                "quantity": quantity,
+                "description": description,
+                "specifications": specifications
+            }
+        )
+
+
+    if not sizes:
+
+        raise ValueError(
+            "Add at least one size / variant."
+        )
+
+
+    total_quantity = sum(
+        item["quantity"]
+        for item in sizes
+    )
+
+
+    return sizes, total_quantity
+# =========================================================
+# NEW PRODUCT SIZE / VARIANT VALIDATION
+# =========================================================
+
+def get_new_product_sizes_from_form():
 
     size_names = request.form.getlist(
         "size_name[]"
@@ -1719,12 +1988,26 @@ def get_product_sizes_from_form():
         "size_quantity[]"
     )
 
+    size_descriptions = request.form.getlist(
+        "size_description[]"
+    )
+
+    size_specifications = request.form.getlist(
+        "size_specifications[]"
+    )
+
     if (
         len(size_names)
         != len(size_prices)
         or
         len(size_names)
         != len(size_quantities)
+        or
+        len(size_names)
+        != len(size_descriptions)
+        or
+        len(size_names)
+        != len(size_specifications)
     ):
 
         raise ValueError(
@@ -1737,11 +2020,15 @@ def get_product_sizes_from_form():
     for (
         raw_name,
         raw_price,
-        raw_quantity
+        raw_quantity,
+        raw_description,
+        raw_specifications
     ) in zip(
         size_names,
         size_prices,
-        size_quantities
+        size_quantities,
+        size_descriptions,
+        size_specifications
     ):
 
         size = raw_name.strip()
@@ -1825,155 +2112,39 @@ def get_product_sizes_from_form():
 
 
         # -------------------------------------------------
-        # ADD VARIANT
+        # VARIANT DESCRIPTION
+        # -------------------------------------------------
+
+        description = (
+            raw_description.strip()
+            or None
+        )
+
+
+        # -------------------------------------------------
+        # VARIANT SPECIFICATIONS
+        # -------------------------------------------------
+
+        specifications = (
+            parse_variant_specifications(
+                raw_specifications,
+                size
+            )
+        )
+
+
+        # -------------------------------------------------
+        # ADD NEW VARIANT
         # -------------------------------------------------
 
         sizes.append(
             {
+                "product_size_id": None,
                 "size": size,
                 "price": price,
-                "quantity": quantity
-            }
-        )
-
-
-    if not sizes:
-
-        raise ValueError(
-            "Add at least one size / variant."
-        )
-
-
-    total_quantity = sum(
-        item["quantity"]
-        for item in sizes
-    )
-
-
-    return sizes, total_quantity
-# =========================================================
-# NEW PRODUCT SIZE / VARIANT VALIDATION
-# =========================================================
-
-def get_new_product_sizes_from_form():
-
-    size_names = request.form.getlist(
-        "size_name[]"
-    )
-
-    size_prices = request.form.getlist(
-        "size_price[]"
-    )
-
-    size_quantities = request.form.getlist(
-        "size_quantity[]"
-    )
-
-    if (
-        len(size_names)
-        != len(size_prices)
-        or
-        len(size_names)
-        != len(size_quantities)
-    ):
-
-        raise ValueError(
-            "Invalid size / variant inventory data."
-        )
-
-    sizes = []
-    used_sizes = set()
-
-    for (
-        raw_name,
-        raw_price,
-        raw_quantity
-    ) in zip(
-        size_names,
-        size_prices,
-        size_quantities
-    ):
-
-        size = raw_name.strip()
-
-        if not size:
-            continue
-
-        normalized_size = size.lower()
-
-        if normalized_size in used_sizes:
-
-            raise ValueError(
-                f"Duplicate size / variant "
-                f"'{size}' is not allowed."
-            )
-
-        used_sizes.add(
-            normalized_size
-        )
-
-
-        # -------------------------------------------------
-        # VARIANT PRICE
-        # -------------------------------------------------
-
-        try:
-
-            price = float(
-                raw_price
-            )
-
-        except (
-            ValueError,
-            TypeError
-        ):
-
-            raise ValueError(
-                f"Invalid price for "
-                f"size / variant '{size}'."
-            )
-
-        if price <= 0:
-
-            raise ValueError(
-                f"Price for size / variant "
-                f"'{size}' must be greater than 0."
-            )
-
-
-        # -------------------------------------------------
-        # VARIANT QUANTITY
-        # -------------------------------------------------
-
-        try:
-
-            quantity = int(
-                raw_quantity
-            )
-
-        except (
-            ValueError,
-            TypeError
-        ):
-
-            raise ValueError(
-                f"Invalid quantity for "
-                f"size / variant '{size}'."
-            )
-
-        if quantity < 0:
-
-            raise ValueError(
-                f"Quantity for size / variant "
-                f"'{size}' cannot be negative."
-            )
-
-
-        sizes.append(
-            {
-                "size": size,
-                "price": price,
-                "quantity": quantity
+                "quantity": quantity,
+                "description": description,
+                "specifications": specifications
             }
         )
 
@@ -2568,7 +2739,9 @@ def add_product():
                         ProductSize(
                             size=size_data["size"],
                             price=size_data["price"],
-                            quantity=size_data["quantity"]
+                            quantity=size_data["quantity"],
+                            description=size_data["description"],
+                            specifications=size_data["specifications"]
                         )
                     )
 
@@ -3741,57 +3914,192 @@ def edit_product(product_id):
             if has_sizes:
 
                 # -------------------------------------------------
-                # PRESERVE EXISTING VARIANT PRICES
+                # UPDATE EXISTING VARIANTS / CREATE NEW VARIANTS
                 #
-                # Variant price editing will be implemented later.
-                # For now, existing Edit Product must continue to
-                # work without losing the saved variant prices.
+                # Existing ProductSize IDs are preserved.
+                # This is important because CartItem.product_size_id
+                # references ProductSize.id.
                 # -------------------------------------------------
 
-                existing_variant_prices = {
-                    item.size.strip().lower(): item.price
+                existing_variants = {
+                    item.id: item
                     for item in product.sizes
                 }
 
-                # Remove existing size records first.
-                product.sizes.clear()
+                submitted_variant_ids = set()
 
-                # Force DELETE statements to be executed
-                # before inserting the new size records.
-                db.session.flush()
+                protected_variants = []
 
-                # Recreate current size inventory while
-                # preserving existing variant prices.
+
                 for size_data in product_sizes:
 
-                    normalized_size = (
-                        size_data["size"]
-                        .strip()
-                        .lower()
+                    product_size_id = (
+                        size_data["product_size_id"]
                     )
 
-                    variant_price = (
-                        existing_variant_prices.get(
-                            normalized_size
+
+                    # -------------------------------------------------
+                    # EXISTING VARIANT
+                    # -------------------------------------------------
+
+                    if product_size_id is not None:
+
+                        existing_variant = (
+                            existing_variants.get(
+                                product_size_id
+                            )
                         )
-                    )
 
-                    # If this is a newly added size during the
-                    # old edit flow, use the product's base price
-                    # temporarily. Full variant-price editing will
-                    # be added later.
-                    if variant_price is None:
 
-                        variant_price = product.price
+                        # -------------------------------------------------
+                        # INVALID VARIANT ID
+                        # -------------------------------------------------
 
-                    product.sizes.append(
-                        ProductSize(
-                            size=size_data["size"],
-                            price=size_data["price"],
-                            quantity=size_data["quantity"]
+                        if not existing_variant:
+
+                            db.session.rollback()
+
+                            flash(
+                                "Invalid product variant selected.",
+                                "danger"
+                            )
+
+                            return render_template(
+                                "admin/product_form.html",
+                                product=product,
+                                categories=categories,
+                                subcategories=subcategories,
+                                brands=brands
+                            )
+
+
+                        submitted_variant_ids.add(
+                            existing_variant.id
                         )
+
+
+                        # -------------------------------------------------
+                        # UPDATE SAME PRODUCT SIZE RECORD
+                        # -------------------------------------------------
+
+                        existing_variant.size = (
+                            size_data["size"]
+                        )
+
+                        existing_variant.price = (
+                            size_data["price"]
+                        )
+
+                        existing_variant.quantity = (
+                            size_data["quantity"]
+                        )
+
+                        existing_variant.description = (
+                            size_data["description"]
+                        )
+
+                        existing_variant.specifications = (
+                            size_data["specifications"]
+                        )
+
+
+                    # -------------------------------------------------
+                    # NEW VARIANT
+                    # -------------------------------------------------
+
+                    else:
+
+                        product.sizes.append(
+                            ProductSize(
+                                size=size_data["size"],
+                                price=size_data["price"],
+                                quantity=size_data["quantity"],
+                                description=size_data["description"],
+                                specifications=size_data["specifications"]
+                            )
+                        )
+
+
+                # -------------------------------------------------
+                # HANDLE REMOVED VARIANTS
+                # -------------------------------------------------
+                #
+                # Any existing variant that was not submitted
+                # has been removed from the Admin form.
+                #
+                # If it is currently used by a CartItem, do NOT
+                # delete it because cart_items.product_size_id
+                # uses ON DELETE CASCADE.
+                # -------------------------------------------------
+
+                for existing_variant in product.sizes:
+
+                    if existing_variant.id in submitted_variant_ids:
+
+                        continue
+
+
+                    # Newly-created variants do not have an ID
+                    # until the session is flushed.
+                    if existing_variant.id is None:
+
+                        continue
+
+
+                    cart_usage_count = db.session.execute(
+                        db.text(
+                            """
+                            SELECT COUNT(*)
+                            FROM cart_items
+                            WHERE product_size_id = :product_size_id
+                            """
+                        ),
+                        {
+                            "product_size_id":
+                                existing_variant.id
+                        }
+                    ).scalar()
+
+
+                    if cart_usage_count and cart_usage_count > 0:
+
+                        protected_variants.append(
+                            existing_variant.size
+                        )
+
+                    else:
+
+                        db.session.delete(
+                            existing_variant
+                        )
+
+
+                # -------------------------------------------------
+                # BLOCK REMOVAL OF CART-USED VARIANTS
+                # -------------------------------------------------
+
+                if protected_variants:
+
+                    db.session.rollback()
+
+                    protected_names = ", ".join(
+                        protected_variants
                     )
 
+                    flash(
+                        "The following variant(s) cannot be "
+                        "removed because they are currently "
+                        f"in customer carts: {protected_names}",
+                        "warning"
+                    )
+
+                    return render_template(
+                        "admin/product_form.html",
+                        product=product,
+                        categories=categories,
+                        subcategories=subcategories,
+                        brands=brands
+                    )
             else:
 
                 # Product no longer uses sizes.

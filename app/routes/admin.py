@@ -19,7 +19,8 @@ from app.models import (
     Subcategory,
     Product,
     ProductImage,
-    ProductSize
+    ProductSize,
+    Banner
 )
 from app.services.upload_service import upload_image
 from app.services.storage_service import StorageService
@@ -4323,4 +4324,710 @@ def users():
 
     return render_template(
         "admin/users.html"
+    )
+
+# =========================================================
+# BANNER MANAGEMENT
+# =========================================================
+
+@admin_bp.route("/banners")
+def banners():
+
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    banners = (
+        Banner.query
+        .order_by(
+            Banner.display_order.asc(),
+            Banner.created_at.desc()
+        )
+        .all()
+    )
+
+    return render_template(
+        "admin/banners.html",
+        banners=banners
+    )
+
+
+# =========================================================
+# ADD BANNER
+# =========================================================
+
+@admin_bp.route(
+    "/banners/add",
+    methods=["GET", "POST"]
+)
+def add_banner():
+
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    if request.method == "POST":
+
+        title = request.form.get(
+            "title",
+            ""
+        ).strip()
+
+        description = request.form.get(
+            "description",
+            ""
+        ).strip()
+
+        button_text = request.form.get(
+            "button_text",
+            ""
+        ).strip()
+
+        button_link = request.form.get(
+            "button_link",
+            ""
+        ).strip()
+
+        display_order_text = request.form.get(
+            "display_order",
+            "0"
+        ).strip()
+
+        is_active = request.form.get(
+            "is_active"
+        ) == "1"
+
+        image = request.files.get(
+            "image"
+        )
+
+        # -------------------------------------------------
+        # IMAGE VALIDATION
+        # -------------------------------------------------
+
+        if not image or not image.filename:
+
+            flash(
+                "Banner image is required.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/banner_form.html",
+                banner=None
+            )
+
+        # -------------------------------------------------
+        # DISPLAY ORDER VALIDATION
+        # -------------------------------------------------
+
+        try:
+
+            display_order = int(
+                display_order_text
+            )
+
+        except (
+            ValueError,
+            TypeError
+        ):
+
+            flash(
+                "Display order must be a valid whole number.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/banner_form.html",
+                banner=None
+            )
+
+        if display_order < 0:
+
+            flash(
+                "Display order cannot be negative.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/banner_form.html",
+                banner=None
+            )
+
+        # -------------------------------------------------
+        # UPLOAD IMAGE
+        # -------------------------------------------------
+
+        image_key = None
+
+        try:
+
+            image_key = upload_image(
+                image,
+                "banners"
+            )
+
+        except ValueError as error:
+
+            flash(
+                str(error),
+                "danger"
+            )
+
+            return render_template(
+                "admin/banner_form.html",
+                banner=None
+            )
+
+        except Exception:
+
+            flash(
+                "Unable to upload banner image.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/banner_form.html",
+                banner=None
+            )
+
+        # -------------------------------------------------
+        # ONLY ONE ACTIVE BANNER
+        # -------------------------------------------------
+
+        if is_active:
+
+            (
+                Banner.query
+                .filter(
+                    Banner.is_active.is_(True)
+                )
+                .update(
+                    {
+                        Banner.is_active: False
+                    },
+                    synchronize_session=False
+                )
+            )
+
+        # -------------------------------------------------
+        # CREATE BANNER
+        # -------------------------------------------------
+
+        banner = Banner(
+            title=title or None,
+            description=description or None,
+            image_key=image_key,
+            button_text=button_text or None,
+            button_link=button_link or None,
+            display_order=display_order,
+            is_active=is_active
+        )
+
+        try:
+
+            db.session.add(
+                banner
+            )
+
+            db.session.commit()
+
+        except Exception:
+
+            db.session.rollback()
+
+            if image_key:
+
+                StorageService().delete(
+                    image_key
+                )
+
+            flash(
+                "Unable to create banner.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/banner_form.html",
+                banner=None
+            )
+
+        flash(
+            "Banner created successfully.",
+            "success"
+        )
+
+        return redirect(
+            url_for("admin.banners")
+        )
+
+    return render_template(
+        "admin/banner_form.html",
+        banner=None
+    )
+
+
+# =========================================================
+# EDIT BANNER
+# =========================================================
+
+@admin_bp.route(
+    "/banners/<int:banner_id>/edit",
+    methods=["GET", "POST"]
+)
+def edit_banner(banner_id):
+
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    banner = db.session.get(
+        Banner,
+        banner_id
+    )
+
+    if not banner:
+
+        flash(
+            "Banner not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("admin.banners")
+        )
+
+    if request.method == "POST":
+
+        title = request.form.get(
+            "title",
+            ""
+        ).strip()
+
+        description = request.form.get(
+            "description",
+            ""
+        ).strip()
+
+        button_text = request.form.get(
+            "button_text",
+            ""
+        ).strip()
+
+        button_link = request.form.get(
+            "button_link",
+            ""
+        ).strip()
+
+        display_order_text = request.form.get(
+            "display_order",
+            "0"
+        ).strip()
+
+        is_active = request.form.get(
+            "is_active"
+        ) == "1"
+
+        image = request.files.get(
+            "image"
+        )
+
+        # -------------------------------------------------
+        # DISPLAY ORDER VALIDATION
+        # -------------------------------------------------
+
+        try:
+
+            display_order = int(
+                display_order_text
+            )
+
+        except (
+            ValueError,
+            TypeError
+        ):
+
+            flash(
+                "Display order must be a valid whole number.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/banner_form.html",
+                banner=banner
+            )
+
+        if display_order < 0:
+
+            flash(
+                "Display order cannot be negative.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/banner_form.html",
+                banner=banner
+            )
+
+        old_image_key = banner.image_key
+        new_image_key = None
+
+        # -------------------------------------------------
+        # OPTIONAL NEW IMAGE
+        # -------------------------------------------------
+
+        if image and image.filename:
+
+            try:
+
+                new_image_key = upload_image(
+                    image,
+                    "banners"
+                )
+
+            except ValueError as error:
+
+                flash(
+                    str(error),
+                    "danger"
+                )
+
+                return render_template(
+                    "admin/banner_form.html",
+                    banner=banner
+                )
+
+            except Exception:
+
+                flash(
+                    "Unable to upload banner image.",
+                    "danger"
+                )
+
+                return render_template(
+                    "admin/banner_form.html",
+                    banner=banner
+                )
+
+        # -------------------------------------------------
+        # ONLY ONE ACTIVE BANNER
+        # -------------------------------------------------
+
+        if is_active:
+
+            (
+                Banner.query
+                .filter(
+                    Banner.id != banner.id,
+                    Banner.is_active.is_(True)
+                )
+                .update(
+                    {
+                        Banner.is_active: False
+                    },
+                    synchronize_session=False
+                )
+            )
+
+        # -------------------------------------------------
+        # UPDATE BANNER
+        # -------------------------------------------------
+
+        banner.title = title or None
+
+        banner.description = (
+            description or None
+        )
+
+        banner.button_text = (
+            button_text or None
+        )
+
+        banner.button_link = (
+            button_link or None
+        )
+
+        banner.display_order = (
+            display_order
+        )
+
+        banner.is_active = (
+            is_active
+        )
+
+        if new_image_key:
+
+            banner.image_key = (
+                new_image_key
+            )
+
+        try:
+
+            db.session.commit()
+
+        except Exception:
+
+            db.session.rollback()
+
+            if new_image_key:
+
+                StorageService().delete(
+                    new_image_key
+                )
+
+            flash(
+                "Unable to update banner.",
+                "danger"
+            )
+
+            return render_template(
+                "admin/banner_form.html",
+                banner=banner
+            )
+
+        # -------------------------------------------------
+        # DELETE OLD IMAGE AFTER SUCCESSFUL UPDATE
+        # -------------------------------------------------
+
+        if (
+            new_image_key
+            and old_image_key
+        ):
+
+            StorageService().delete(
+                old_image_key
+            )
+
+        flash(
+            "Banner updated successfully.",
+            "success"
+        )
+
+        return redirect(
+            url_for("admin.banners")
+        )
+
+    return render_template(
+        "admin/banner_form.html",
+        banner=banner
+    )
+
+
+# =========================================================
+# TOGGLE BANNER STATUS
+# =========================================================
+
+@admin_bp.route(
+    "/banners/<int:banner_id>/toggle",
+    methods=["POST"]
+)
+def toggle_banner(banner_id):
+
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    banner = db.session.get(
+        Banner,
+        banner_id
+    )
+
+    if not banner:
+
+        flash(
+            "Banner not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("admin.banners")
+        )
+
+    # -----------------------------------------------------
+    # ACTIVATE BANNER
+    # -----------------------------------------------------
+
+    if not banner.is_active:
+
+        # Deactivate every other banner first.
+        (
+            Banner.query
+            .filter(
+                Banner.id != banner.id,
+                Banner.is_active.is_(True)
+            )
+            .update(
+                {
+                    Banner.is_active: False
+                },
+                synchronize_session=False
+            )
+        )
+
+        banner.is_active = True
+
+        message = (
+            "Banner activated successfully."
+        )
+
+    # -----------------------------------------------------
+    # DEACTIVATE CURRENT BANNER
+    # -----------------------------------------------------
+
+    else:
+
+        banner.is_active = False
+
+        message = (
+            "Banner deactivated successfully."
+        )
+
+    try:
+
+        db.session.commit()
+
+    except Exception:
+
+        db.session.rollback()
+
+        flash(
+            "Unable to update banner status.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("admin.banners")
+        )
+
+    flash(
+        message,
+        "success"
+    )
+
+    return redirect(
+        url_for("admin.banners")
+    )
+
+
+# =========================================================
+# DELETE BANNER
+# =========================================================
+
+@admin_bp.route(
+    "/banners/<int:banner_id>/delete",
+    methods=["POST"]
+)
+def delete_banner(banner_id):
+
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    banner = db.session.get(
+        Banner,
+        banner_id
+    )
+
+    if not banner:
+
+        flash(
+            "Banner not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("admin.banners")
+        )
+
+    image_key = banner.image_key
+
+    try:
+
+        db.session.delete(
+            banner
+        )
+
+        db.session.commit()
+
+    except Exception:
+
+        db.session.rollback()
+
+        flash(
+            "Banner could not be deleted.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("admin.banners")
+        )
+
+    # -----------------------------------------------------
+    # DELETE IMAGE AFTER DATABASE DELETE
+    # -----------------------------------------------------
+
+    if image_key:
+
+        try:
+
+            StorageService().delete(
+                image_key
+            )
+
+        except Exception:
+
+            flash(
+                "Banner deleted, but its image file "
+                "could not be removed.",
+                "warning"
+            )
+
+            return redirect(
+                url_for("admin.banners")
+            )
+
+    flash(
+        "Banner permanently deleted.",
+        "success"
+    )
+
+    return redirect(
+        url_for("admin.banners")
+    )
+
+
+# =========================================================
+# BANNER IMAGE VIEW
+# =========================================================
+
+@admin_bp.route(
+    "/banners/<int:banner_id>/image"
+)
+def banner_image(banner_id):
+
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    banner = db.session.get(
+        Banner,
+        banner_id
+    )
+
+    if not banner or not banner.image_key:
+
+        return "", 404
+
+    storage = StorageService()
+
+    image_path = storage.get_path(
+        banner.image_key
+    )
+
+    if (
+        not image_path
+        or not image_path.exists()
+    ):
+
+        return "", 404
+
+    from flask import send_file
+
+    return send_file(
+        image_path,
+        mimetype="image/webp"
     )

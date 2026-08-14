@@ -16,71 +16,56 @@ ShopEase | Home
 
     <div class="container-fluid px-0">
 
-        <div class="banner-wrapper">
+<div class="banner-wrapper">
 
-            {% if banner %}
+    {% if banner %}
+
+        {% if banner.button_link %}
+
+            <a
+                href="{{ banner.button_link }}"
+                class="d-block"
+                aria-label="{{ banner.title or 'ShopEase promotional banner' }}"
+            >
 
                 <img
-                    src="{{ url_for('main.banner_image', banner_id=banner.id) }}"
+                    src="{{ url_for(
+                        'main.banner_image',
+                        banner_id=banner.id
+                    ) }}"
                     class="home-banner-image"
                     alt="{{ banner.title or 'ShopEase promotional banner' }}"
                 >
 
-                <div class="banner-overlay">
+            </a>
 
-                    <div class="container">
+        {% else %}
 
-                        <div class="banner-content">
+            <img
+                src="{{ url_for(
+                    'main.banner_image',
+                    banner_id=banner.id
+                ) }}"
+                class="home-banner-image"
+                alt="{{ banner.title or 'ShopEase promotional banner' }}"
+            >
 
-                            {% if banner.title %}
+        {% endif %}
 
-                                <h1 class="display-4 fw-bold">
-                                    {{ banner.title }}
-                                </h1>
+    {% else %}
 
-                            {% endif %}
+        <img
+            src="{{ url_for(
+                'static',
+                filename='images/default-banner.svg'
+            ) }}"
+            class="home-banner-image"
+            alt="ShopEase"
+        >
 
+    {% endif %}
 
-                            {% if banner.description %}
-
-                                <p class="lead mb-4">
-                                    {{ banner.description }}
-                                </p>
-
-                            {% endif %}
-
-
-                            {% if banner.button_text %}
-
-                                <a
-                                    href="{{ banner.button_link or '#' }}"
-                                    class="btn btn-light btn-lg px-4"
-                                >
-                                    {{ banner.button_text }}
-                                </a>
-
-                            {% endif %}
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            {% else %}
-
-                <img
-                    src="{{ url_for(
-                        'static',
-                        filename='images/default-banner.svg'
-                    ) }}"
-                    class="home-banner-image"
-                    alt="ShopEase"
-                >
-
-            {% endif %}
-
-        </div>
+</div>
 
     </div>
 

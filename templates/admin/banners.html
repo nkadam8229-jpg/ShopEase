@@ -1,0 +1,326 @@
+{% extends "admin/base.html" %}
+
+
+{% block title %}
+Banners | ShopEase Admin
+{% endblock %}
+
+
+{% block content %}
+
+<div class="container py-5">
+
+    <!-- =========================
+         HEADER
+    ========================== -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+
+            <h2 class="fw-bold mb-1">
+                Banners
+            </h2>
+
+            <p class="text-muted mb-0">
+                Manage homepage promotional banners.
+            </p>
+
+        </div>
+
+
+        <a
+            href="{{ url_for('admin.add_banner') }}"
+            class="btn btn-primary"
+        >
+            + Add New Banner
+        </a>
+
+    </div>
+
+
+    <!-- =========================
+         BANNER LIST
+    ========================== -->
+
+    {% if banners %}
+
+        <div class="row g-4">
+
+            {% for banner in banners %}
+
+                <div class="col-12">
+
+                    <div class="card border-0 shadow-sm">
+
+                        <div class="card-body">
+
+                            <div class="row g-4 align-items-center">
+
+
+                                <!-- =========================
+                                     IMAGE
+                                ========================== -->
+
+                                <div class="col-md-4">
+
+                                    <div
+                                        class="border rounded overflow-hidden bg-light"
+                                        style="height: 180px;"
+                                    >
+
+                                        <img
+                                            src="{{ url_for(
+                                                'admin.banner_image',
+                                                banner_id=banner.id
+                                            ) }}"
+                                            alt="{{ banner.title or 'ShopEase banner' }}"
+                                            class="w-100 h-100"
+                                            style="object-fit: cover;"
+                                        >
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- =========================
+                                     DETAILS
+                                ========================== -->
+
+                                <div class="col-md-5">
+
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+
+                                        <h5 class="fw-bold mb-0">
+
+                                            {{ banner.title or "Untitled Banner" }}
+
+                                        </h5>
+
+
+                                        {% if banner.is_active %}
+
+                                            <span class="badge bg-success">
+                                                Active
+                                            </span>
+
+                                        {% else %}
+
+                                            <span class="badge bg-secondary">
+                                                Inactive
+                                            </span>
+
+                                        {% endif %}
+
+                                    </div>
+
+
+                                    {% if banner.description %}
+
+                                        <p class="text-muted mb-3">
+
+                                            {{ banner.description }}
+
+                                        </p>
+
+                                    {% else %}
+
+                                        <p class="text-muted fst-italic mb-3">
+
+                                            No description
+
+                                        </p>
+
+                                    {% endif %}
+
+
+                                    <div class="small text-muted">
+
+                                        <div class="mb-1">
+
+                                            <strong>
+                                                Display Order:
+                                            </strong>
+
+                                            {{ banner.display_order }}
+
+                                        </div>
+
+
+                                        {% if banner.button_text %}
+
+                                            <div class="mb-1">
+
+                                                <strong>
+                                                    Button:
+                                                </strong>
+
+                                                {{ banner.button_text }}
+
+                                            </div>
+
+                                        {% endif %}
+
+
+                                        {% if banner.button_link %}
+
+                                            <div class="mb-1">
+
+                                                <strong>
+                                                    Link:
+                                                </strong>
+
+                                                <span class="text-break">
+                                                    {{ banner.button_link }}
+                                                </span>
+
+                                            </div>
+
+                                        {% endif %}
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- =========================
+                                     ACTIONS
+                                ========================== -->
+
+                                <div class="col-md-3">
+
+                                    <div class="d-grid gap-2">
+
+
+                                        <!-- Edit -->
+
+                                        <a
+                                            href="{{ url_for(
+                                                'admin.edit_banner',
+                                                banner_id=banner.id
+                                            ) }}"
+                                            class="btn btn-outline-primary"
+                                        >
+                                            Edit
+                                        </a>
+
+
+                                        <!-- Activate / Deactivate -->
+
+                                        <form
+                                            method="POST"
+                                            action="{{ url_for(
+                                                'admin.toggle_banner',
+                                                banner_id=banner.id
+                                            ) }}"
+                                        >
+                                        <input
+    type="hidden"
+    name="csrf_token"
+    value="{{ csrf_token() }}"
+>
+
+                                            {% if banner.is_active %}
+
+                                                <button
+                                                    type="submit"
+                                                    class="btn btn-outline-warning w-100"
+                                                >
+                                                    Deactivate
+                                                </button>
+
+                                            {% else %}
+
+                                                <button
+                                                    type="submit"
+                                                    class="btn btn-outline-success w-100"
+                                                >
+                                                    Activate
+                                                </button>
+
+                                            {% endif %}
+
+                                        </form>
+
+
+                                        <!-- Delete -->
+
+                                        <form
+                                            method="POST"
+                                            action="{{ url_for(
+                                                'admin.delete_banner',
+                                                banner_id=banner.id
+                                            ) }}"
+                                            onsubmit="return confirm(
+                                                'Are you sure you want to permanently delete this banner?'
+                                            );"
+                                        >
+                                        <input
+    type="hidden"
+    name="csrf_token"
+    value="{{ csrf_token() }}"
+>
+
+                                            <button
+                                                type="submit"
+                                                class="btn btn-outline-danger w-100"
+                                            >
+                                                Delete
+                                            </button>
+
+                                        </form>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+
+    {% else %}
+
+        <!-- =========================
+             EMPTY STATE
+        ========================== -->
+
+        <div class="card border-0 shadow-sm">
+
+            <div class="card-body text-center py-5">
+
+                <h5 class="fw-bold mb-2">
+                    No banners found
+                </h5>
+
+                <p class="text-muted mb-4">
+                    Create your first homepage banner to
+                    replace the default banner.
+                </p>
+
+
+                <a
+                    href="{{ url_for('admin.add_banner') }}"
+                    class="btn btn-primary"
+                >
+                    + Add New Banner
+                </a>
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

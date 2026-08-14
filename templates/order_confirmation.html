@@ -1,0 +1,659 @@
+{% extends "base.html" %}
+
+{% block title %}
+Order Confirmation - ShopEase
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-4 py-lg-5">
+
+    <!-- =====================================================
+         SUCCESS HEADER
+    ====================================================== -->
+
+<!-- =====================================================
+     ANIMATED ORDER STATUS HEADER
+====================================================== -->
+
+<div class="order-status-hero text-center mb-4">
+
+    {% if display_status == "PENDING" %}
+
+        <div class="status-animation status-pending">
+            <span>🕐</span>
+        </div>
+
+        <h2 class="fw-bold mb-2">
+            Order Placed
+        </h2>
+
+        <p class="text-muted mb-0">
+            Your order has been received and is being processed.
+        </p>
+
+
+    {% elif display_status == "CONFIRMED" %}
+
+        <div class="status-animation status-confirmed">
+            <span>✓</span>
+        </div>
+
+        <h2 class="fw-bold mb-2">
+            Order Confirmed
+        </h2>
+
+        <p class="text-muted mb-0">
+            Your order has been confirmed successfully.
+        </p>
+
+
+    {% elif display_status == "OUT FOR DELIVERY" %}
+
+        <div class="status-animation status-delivery">
+            <span>🚚</span>
+        </div>
+
+        <h2 class="fw-bold mb-2">
+            Out for Delivery
+        </h2>
+
+        <p class="text-muted mb-0">
+            Your order is on the way.
+        </p>
+
+
+    {% elif display_status == "DELIVERED" %}
+
+        <div class="status-animation status-delivered">
+            <span>✓</span>
+        </div>
+
+        <h2 class="fw-bold mb-2">
+            Delivered Successfully
+        </h2>
+
+        <p class="text-muted mb-0">
+            Your order has been delivered. Thank you for shopping with ShopEase.
+        </p>
+
+    {% endif %}
+
+</div>
+
+
+    <div class="row g-4">
+
+        <!-- =================================================
+             ORDER DETAILS
+        ================================================== -->
+
+        <div class="col-lg-8">
+
+            <div class="card border-0 shadow-sm mb-4">
+
+                <div class="card-body p-4">
+
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+
+                        <div>
+
+                            <h5 class="fw-bold mb-1">
+                                Order Details
+                            </h5>
+
+                            <div class="text-muted small">
+                                Order #{{ order.order_number }}
+                            </div>
+
+                        </div>
+
+
+                        <span class="badge bg-primary fs-6 px-3 py-2">
+
+                            {{ display_status }}
+
+                        </span>
+
+                    </div>
+
+
+<!-- =====================================
+     ORDER ITEMS
+====================================== -->
+
+{% for item in order_items %}
+
+<div class="border-bottom py-3">
+
+    <div class="row align-items-center g-3">
+
+        <!-- =================================
+             PRIMARY PRODUCT IMAGE
+        ================================== -->
+
+        <div class="col-4">
+
+            {% if item.product and item.product.images %}
+
+            <div
+                class="d-flex align-items-center justify-content-center"
+                style="height:130px;"
+            >
+
+                <img
+                    src="{{ url_for(
+                        'main.product_image',
+                        image_id=item.product.images[0].id
+                    ) }}"
+                    alt="{{ item.product_name }}"
+                    style="
+                        max-width:100%;
+                        max-height:130px;
+                        object-fit:contain;
+                    "
+                >
+
+            </div>
+
+            {% else %}
+
+            <div
+                class="d-flex align-items-center justify-content-center bg-light rounded-3 text-muted small"
+                style="height:130px;"
+            >
+                No Image
+            </div>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- =================================
+             PRODUCT DETAILS
+        ================================== -->
+
+        <div class="col-5">
+
+            <div class="fw-semibold mb-1">
+                {{ item.product_name }}
+            </div>
+
+
+            {% if item.variant_name %}
+
+            <div class="small text-muted">
+                Variant:
+                {{ item.variant_name }}
+            </div>
+
+            {% endif %}
+
+
+            <div class="small text-muted">
+                Quantity:
+                {{ item.quantity }}
+            </div>
+
+        </div>
+
+
+        <!-- =================================
+             ITEM TOTAL
+        ================================== -->
+
+        <div class="col-3 text-end">
+
+            <div class="fw-semibold text-nowrap">
+
+                ₹{{ "%.2f"|format(item.total_price) }}
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endfor %}
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 DELIVERY ADDRESS
+            ================================================== -->
+
+            <div class="card border-0 shadow-sm mb-4">
+
+                <div class="card-body p-4">
+
+                    <h5 class="fw-bold mb-3">
+                        Delivery Address
+                    </h5>
+
+
+                    <div>
+
+                        <div class="fw-semibold">
+                            {{ order.shipping_full_name }}
+                        </div>
+
+                        <div class="text-muted">
+                            {{ order.shipping_phone }}
+                        </div>
+
+                        <div class="text-muted mt-2">
+                            {{ order.shipping_address_line }}
+                        </div>
+
+                        <div class="text-muted">
+
+                            {{ order.shipping_city }},
+                            {{ order.shipping_state }}
+                            - {{ order.shipping_pincode }}
+
+                        </div>
+
+                        <div class="text-muted mt-1">
+                            {{ order.shipping_email }}
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 ORDER STATUS
+            ================================================== -->
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body p-4">
+
+                    <h5 class="fw-bold mb-4">
+                        Order Status
+                    </h5>
+
+
+                    <div class="row text-center">
+
+                        <!-- PENDING -->
+
+                        <div class="col-3">
+
+                            <div
+                                class="rounded-circle mx-auto mb-2
+                                {% if display_status in ['PENDING', 'CONFIRMED', 'OUT FOR DELIVERY', 'DELIVERED'] %}
+                                bg-primary text-white
+                                {% else %}
+                                bg-light text-muted
+                                {% endif %}"
+                                style="width:42px;height:42px;line-height:42px;"
+                            >
+                                1
+                            </div>
+
+                            <small>
+                                Placed
+                            </small>
+
+                        </div>
+
+
+                        <!-- CONFIRMED -->
+
+                        <div class="col-3">
+
+                            <div
+                                class="rounded-circle mx-auto mb-2
+                                {% if display_status in ['CONFIRMED', 'OUT FOR DELIVERY', 'DELIVERED'] %}
+                                bg-primary text-white
+                                {% else %}
+                                bg-light text-muted
+                                {% endif %}"
+                                style="width:42px;height:42px;line-height:42px;"
+                            >
+                                2
+                            </div>
+
+                            <small>
+                                Confirmed
+                            </small>
+
+                        </div>
+
+
+                        <!-- OUT FOR DELIVERY -->
+
+                        <div class="col-3">
+
+                            <div
+                                class="rounded-circle mx-auto mb-2
+                                {% if display_status in ['OUT FOR DELIVERY', 'DELIVERED'] %}
+                                bg-primary text-white
+                                {% else %}
+                                bg-light text-muted
+                                {% endif %}"
+                                style="width:42px;height:42px;line-height:42px;"
+                            >
+                                3
+                            </div>
+
+                            <small>
+                                Out for Delivery
+                            </small>
+
+                        </div>
+
+
+                        <!-- DELIVERED -->
+
+                        <div class="col-3">
+
+                            <div
+                                class="rounded-circle mx-auto mb-2
+                                {% if display_status == 'DELIVERED' %}
+                                bg-success text-white
+                                {% else %}
+                                bg-light text-muted
+                                {% endif %}"
+                                style="width:42px;height:42px;line-height:42px;"
+                            >
+                                4
+                            </div>
+
+                            <small>
+                                Delivered
+                            </small>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             RIGHT SIDE — SUMMARY
+        ================================================== -->
+
+        <div class="col-lg-4">
+
+            <div
+                class="card border-0 shadow-sm"
+                style="position:sticky;top:20px;"
+            >
+
+                <div class="card-body p-4">
+
+                    <h5 class="fw-bold mb-4">
+                        Payment Summary
+                    </h5>
+
+
+                    <div class="d-flex justify-content-between mb-2">
+
+                        <span class="text-muted">
+                            Subtotal
+                        </span>
+
+                        <span>
+                            ₹{{ "%.2f"|format(order.subtotal) }}
+                        </span>
+
+                    </div>
+
+
+                    <div class="d-flex justify-content-between mb-3">
+
+                        <span class="text-muted">
+                            Delivery
+                        </span>
+
+                        {% if order.delivery_fee > 0 %}
+
+                        <span>
+                            ₹{{ "%.2f"|format(order.delivery_fee) }}
+                        </span>
+
+                        {% else %}
+
+                        <span class="text-success">
+                            FREE
+                        </span>
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <hr>
+
+
+                    <div class="d-flex justify-content-between mb-4">
+
+                        <span class="fw-bold">
+                            Total
+                        </span>
+
+                        <span class="fw-bold fs-5">
+                            ₹{{ "%.2f"|format(order.total_amount) }}
+                        </span>
+
+                    </div>
+
+
+                    <div class="small text-muted mb-4">
+
+                        Payment Method:
+                        <strong>
+                            {{ order.payment_method }}
+                        </strong>
+
+                    </div>
+
+
+                    <a
+                        href="{{ url_for('main.products') }}"
+                        class="btn btn-primary w-100"
+                    >
+                        Continue Shopping
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     AUTOMATIC STATUS REFRESH
+========================================================= -->
+
+<script>
+
+setTimeout(
+    function () {
+
+        window.location.reload();
+
+    },
+    10000
+);
+
+</script>
+
+<style>
+
+/* =========================================================
+   ORDER STATUS HERO
+========================================================= */
+
+.order-status-hero {
+    animation: statusFadeIn 0.6s ease;
+}
+
+
+/* =========================================================
+   STATUS ICON
+========================================================= */
+
+.status-animation {
+
+    width: 78px;
+    height: 78px;
+
+    margin: 0 auto 18px;
+
+    border-radius: 50%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 34px;
+    font-weight: 700;
+
+    animation:
+        statusPop 0.6s ease,
+        statusPulse 2s ease-in-out infinite;
+
+}
+
+
+/* =========================================================
+   PENDING
+========================================================= */
+
+.status-pending {
+
+    background: #fff3cd;
+    color: #856404;
+
+}
+
+
+/* =========================================================
+   CONFIRMED
+========================================================= */
+
+.status-confirmed {
+
+    background: #dbeafe;
+    color: #0d6efd;
+
+}
+
+
+/* =========================================================
+   OUT FOR DELIVERY
+========================================================= */
+
+.status-delivery {
+
+    background: #e0f2fe;
+    color: #0284c7;
+
+}
+
+
+/* =========================================================
+   DELIVERED
+========================================================= */
+
+.status-delivered {
+
+    background: #d1fae5;
+    color: #198754;
+
+}
+
+
+/* =========================================================
+   ANIMATIONS
+========================================================= */
+
+@keyframes statusPop {
+
+    0% {
+
+        transform: scale(0.4);
+        opacity: 0;
+
+    }
+
+    70% {
+
+        transform: scale(1.1);
+        opacity: 1;
+
+    }
+
+    100% {
+
+        transform: scale(1);
+        opacity: 1;
+
+    }
+
+}
+
+
+@keyframes statusPulse {
+
+    0%,
+    100% {
+
+        box-shadow:
+            0 0 0 0 rgba(13, 110, 253, 0.15);
+
+    }
+
+    50% {
+
+        box-shadow:
+            0 0 0 12px rgba(13, 110, 253, 0);
+
+    }
+
+}
+
+
+@keyframes statusFadeIn {
+
+    from {
+
+        opacity: 0;
+        transform: translateY(-10px);
+
+    }
+
+    to {
+
+        opacity: 1;
+        transform: translateY(0);
+
+    }
+
+}
+
+</style>
+
+{% endblock %}

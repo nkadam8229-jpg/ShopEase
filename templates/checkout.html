@@ -6,7 +6,7 @@ Checkout - ShopEase
 
 {% block content %}
 
-<div class="container py-5">
+<div class="container py-4 py-lg-5">
 
     <!-- =====================================================
          PAGE HEADER
@@ -19,26 +19,31 @@ Checkout - ShopEase
         </h2>
 
         <p class="text-muted mb-0">
-            Enter your delivery details and review your order.
+            Confirm your delivery details and review your order.
         </p>
 
     </div>
 
 
     <form
-        method="POST"
-        action="{{ url_for('main.place_order') }}"
-        id="checkoutForm"
+    method="POST"
+    action="{{ url_for('main.place_order') }}"
+    id="checkoutForm"
+>
+
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}"
     >
 
         <div class="row g-4">
 
             <!-- =================================================
-                 LEFT SIDE
+                 LEFT SIDE — DELIVERY DETAILS
             ================================================== -->
 
             <div class="col-lg-8">
-
 
                 <!-- =============================================
                      DELIVERY ADDRESS
@@ -48,19 +53,15 @@ Checkout - ShopEase
 
                     <div class="card-body p-4">
 
-                        <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="mb-4">
 
-                            <div>
+                            <h5 class="fw-bold mb-1">
+                                Delivery Address
+                            </h5>
 
-                                <h5 class="fw-bold mb-1">
-                                    Delivery Address
-                                </h5>
-
-                                <small class="text-muted">
-                                    Where should we deliver your order?
-                                </small>
-
-                            </div>
+                            <small class="text-muted">
+                                Choose a saved address or enter a new delivery address.
+                            </small>
 
                         </div>
 
@@ -73,9 +74,22 @@ Checkout - ShopEase
 
                         <div class="mb-4">
 
-                            <label class="form-label fw-semibold">
-                                Saved Addresses
-                            </label>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+
+                                <label class="form-label fw-semibold mb-0">
+                                    Saved Addresses
+                                </label>
+
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-primary btn-sm"
+                                    id="newAddressButton"
+                                >
+                                    + Add New Address
+                                </button>
+
+                            </div>
+
 
                             <div class="row g-3">
 
@@ -84,12 +98,12 @@ Checkout - ShopEase
                                 <div class="col-md-6">
 
                                     <div
-                                        class="border rounded p-3 h-100 address-card"
+                                        class="border rounded-3 p-3 h-100 address-card"
                                         data-address-id="{{ address.id }}"
                                         style="cursor:pointer;"
                                     >
 
-                                        <div class="d-flex justify-content-between">
+                                        <div class="d-flex justify-content-between align-items-start gap-2">
 
                                             <div>
 
@@ -119,7 +133,7 @@ Checkout - ShopEase
 
                                         <div class="small text-muted mt-2">
 
-                                            <div>
+                                            <div class="mb-1">
                                                 {{ address.phone }}
                                             </div>
 
@@ -145,40 +159,38 @@ Checkout - ShopEase
 
                         </div>
 
+                        {% else %}
+
+                        <div class="alert alert-light border mb-4">
+
+                            <div class="fw-semibold mb-1">
+                                No saved addresses
+                            </div>
+
+                            <div class="small text-muted">
+                                Enter your delivery details below.
+                            </div>
+
+                        </div>
+
                         {% endif %}
 
 
                         <!-- =====================================
-                             NEW / CUSTOM ADDRESS
+                             DELIVERY DETAILS
                         ====================================== -->
 
                         <div class="border-top pt-4">
 
-                            <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="mb-3">
 
-                                <div>
+                                <h6 class="fw-bold mb-1">
+                                    Recipient Details
+                                </h6>
 
-                                    <h6 class="fw-bold mb-1">
-                                        Delivery Details
-                                    </h6>
-
-                                    <small class="text-muted">
-                                        You can use a saved address or enter new details.
-                                    </small>
-
-                                </div>
-
-                                {% if addresses %}
-
-                                <button
-                                    type="button"
-                                    class="btn btn-outline-primary btn-sm"
-                                    id="newAddressButton"
-                                >
-                                    Use New Address
-                                </button>
-
-                                {% endif %}
+                                <small class="text-muted">
+                                    These details will be used for this order.
+                                </small>
 
                             </div>
 
@@ -187,24 +199,30 @@ Checkout - ShopEase
                                  SOMEONE ELSE
                             ================================== -->
 
-                            <div class="form-check mb-4">
+                            <div class="border rounded-3 p-3 mb-4 bg-light">
 
-                                <input
-                                    class="form-check-input"
-                                    type="checkbox"
-                                    id="someoneElse"
-                                >
+                                <div class="form-check">
 
-                                <label
-                                    class="form-check-label fw-semibold"
-                                    for="someoneElse"
-                                >
-                                    This order is for someone else
-                                </label>
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        id="someoneElse"
+                                        name="someone_else"
+                                        value="1"
+                                    >
+
+                                    <label
+                                        class="form-check-label fw-semibold"
+                                        for="someoneElse"
+                                    >
+                                        This order is for someone else
+                                    </label>
+
+                                </div>
 
                                 <div class="small text-muted ms-4 mt-1">
 
-                                    Enter the recipient's contact details below.
+                                    Enter the recipient's details below.
                                     Your account information will not be changed.
 
                                 </div>
@@ -222,7 +240,7 @@ Checkout - ShopEase
 
                                     <label
                                         for="full_name"
-                                        class="form-label"
+                                        class="form-label fw-semibold"
                                     >
                                         Full Name
                                     </label>
@@ -232,6 +250,8 @@ Checkout - ShopEase
                                         class="form-control"
                                         id="full_name"
                                         name="full_name"
+                                        value="{{ account_name }}"
+                                        maxlength="100"
                                         required
                                     >
 
@@ -242,7 +262,7 @@ Checkout - ShopEase
 
                                     <label
                                         for="phone"
-                                        class="form-label"
+                                        class="form-label fw-semibold"
                                     >
                                         Mobile Number
                                     </label>
@@ -252,6 +272,8 @@ Checkout - ShopEase
                                         class="form-control"
                                         id="phone"
                                         name="phone"
+                                        value="{{ account_phone }}"
+                                        maxlength="20"
                                         required
                                     >
 
@@ -262,7 +284,7 @@ Checkout - ShopEase
 
                                     <label
                                         for="email"
-                                        class="form-label"
+                                        class="form-label fw-semibold"
                                     >
                                         Email Address
                                     </label>
@@ -272,6 +294,8 @@ Checkout - ShopEase
                                         class="form-control"
                                         id="email"
                                         name="email"
+                                        value="{{ account_email }}"
+                                        maxlength="150"
                                         required
                                     >
 
@@ -282,7 +306,7 @@ Checkout - ShopEase
 
                                     <label
                                         for="address_line"
-                                        class="form-label"
+                                        class="form-label fw-semibold"
                                     >
                                         Full Address
                                     </label>
@@ -292,6 +316,7 @@ Checkout - ShopEase
                                         id="address_line"
                                         name="address_line"
                                         rows="3"
+                                        maxlength="255"
                                         placeholder="House / Flat / Building / Street / Area"
                                         required
                                     ></textarea>
@@ -303,7 +328,7 @@ Checkout - ShopEase
 
                                     <label
                                         for="city"
-                                        class="form-label"
+                                        class="form-label fw-semibold"
                                     >
                                         City
                                     </label>
@@ -313,6 +338,7 @@ Checkout - ShopEase
                                         class="form-control"
                                         id="city"
                                         name="city"
+                                        maxlength="100"
                                         required
                                     >
 
@@ -323,7 +349,7 @@ Checkout - ShopEase
 
                                     <label
                                         for="state"
-                                        class="form-label"
+                                        class="form-label fw-semibold"
                                     >
                                         State
                                     </label>
@@ -333,6 +359,7 @@ Checkout - ShopEase
                                         class="form-control"
                                         id="state"
                                         name="state"
+                                        maxlength="100"
                                         required
                                     >
 
@@ -343,7 +370,7 @@ Checkout - ShopEase
 
                                     <label
                                         for="pincode"
-                                        class="form-label"
+                                        class="form-label fw-semibold"
                                     >
                                         PIN Code
                                     </label>
@@ -361,12 +388,46 @@ Checkout - ShopEase
 
                             </div>
 
+
+                            <!-- =================================
+                                 SAVE ADDRESS
+                            ================================== -->
+
+                            <div class="border rounded-3 p-3 mt-4">
+
+                                <div class="form-check">
+
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        id="saveAddress"
+                                        name="save_address"
+                                        value="1"
+                                    >
+
+                                    <label
+                                        class="form-check-label fw-semibold"
+                                        for="saveAddress"
+                                    >
+                                        Save this address for future orders
+                                    </label>
+
+                                </div>
+
+                                <div
+                                    class="small text-muted ms-4 mt-1"
+                                    id="saveAddressHelp"
+                                >
+                                    This address will be saved to your ShopEase account.
+                                </div>
+
+                            </div>
+
                         </div>
 
                     </div>
 
                 </div>
-
 
 
                 <!-- =================================================
@@ -382,11 +443,11 @@ Checkout - ShopEase
                         </h5>
 
                         <small class="text-muted d-block mb-3">
-                            Payment processing will be added later.
+                            Online payment will be integrated later.
                         </small>
 
 
-                        <div class="border rounded p-3">
+                        <div class="border rounded-3 p-3">
 
                             <div class="form-check">
 
@@ -400,11 +461,11 @@ Checkout - ShopEase
                                 <label class="form-check-label">
 
                                     <strong>
-                                        Online Payment
+                                        Demo / Cash on Delivery
                                     </strong>
 
                                     <div class="small text-muted">
-                                        Payment gateway will be integrated later.
+                                        No real payment gateway is used at this stage.
                                     </div>
 
                                 </label>
@@ -418,7 +479,6 @@ Checkout - ShopEase
                 </div>
 
             </div>
-
 
 
             <!-- =================================================
@@ -445,41 +505,85 @@ Checkout - ShopEase
 
                         {% for item in cart_items %}
 
-                        <div class="d-flex justify-content-between gap-3 mb-3">
+                        <div class="border-bottom pb-3 mb-3">
 
-                            <div>
+                            <div class="row align-items-center g-3">
 
-                                <div class="fw-semibold">
+                                <!-- PRIMARY PRODUCT IMAGE -->
 
-                                    {{ item.product.name }}
+                                <div class="col-4">
+
+                                    {% if item.product.images %}
+
+                                    <div
+                                        class="d-flex align-items-center justify-content-center rounded-3 bg-light"
+                                        style="height:110px;"
+                                    >
+
+                                        <img
+                                            src="{{ url_for(
+                                                'main.product_image',
+                                                image_id=item.product.images[0].id
+                                            ) }}"
+                                            alt="{{ item.product.name }}"
+                                            style="
+                                                max-width:100%;
+                                                max-height:100%;
+                                                object-fit:contain;
+                                            "
+                                        >
+
+                                    </div>
+
+                                    {% else %}
+
+                                    <div
+                                        class="d-flex align-items-center justify-content-center rounded-3 bg-light text-muted small"
+                                        style="height:110px;"
+                                    >
+                                        No Image
+                                    </div>
+
+                                    {% endif %}
 
                                 </div>
 
 
-                                {% if item.product_size %}
+                                <!-- PRODUCT INFORMATION -->
 
-                                <div class="small text-muted">
+                                <div class="col-5">
 
-                                    Variant:
-                                    {{ item.product_size.size }}
+                                    <div class="fw-semibold">
+                                        {{ item.product.name }}
+                                    </div>
+
+                                    {% if item.product_size %}
+
+                                    <div class="small text-muted">
+                                        Variant:
+                                        <strong>
+                                            {{ item.product_size.size }}
+                                        </strong>
+                                    </div>
+
+                                    {% endif %}
+
+                                    <div class="small text-muted">
+                                        Qty: {{ item.quantity }}
+                                    </div>
 
                                 </div>
 
-                                {% endif %}
 
+                                <!-- ITEM TOTAL -->
 
-                                <div class="small text-muted">
+                                <div class="col-3 text-end">
 
-                                    Qty: {{ item.quantity }}
+                                    <div class="fw-semibold text-nowrap">
+                                        ₹{{ "%.2f"|format(item.subtotal) }}
+                                    </div>
 
                                 </div>
-
-                            </div>
-
-
-                            <div class="text-end fw-semibold">
-
-                                ₹{{ "%.2f"|format(item.subtotal) }}
 
                             </div>
 
@@ -488,11 +592,8 @@ Checkout - ShopEase
                         {% endfor %}
 
 
-                        <hr>
-
-
                         <!-- =====================================
-                             SUBTOTAL
+                             PRICE BREAKDOWN
                         ====================================== -->
 
                         <div class="d-flex justify-content-between mb-2">
@@ -507,10 +608,6 @@ Checkout - ShopEase
 
                         </div>
 
-
-                        <!-- =====================================
-                             DELIVERY
-                        ====================================== -->
 
                         <div class="d-flex justify-content-between mb-3">
 
@@ -538,11 +635,7 @@ Checkout - ShopEase
                         <hr>
 
 
-                        <!-- =====================================
-                             TOTAL
-                        ====================================== -->
-
-                        <div class="d-flex justify-content-between mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
 
                             <span class="fw-bold">
                                 Total
@@ -556,22 +649,23 @@ Checkout - ShopEase
 
 
                         <!-- =====================================
-                             FREE DELIVERY MESSAGE
+                             DELIVERY MESSAGE
                         ====================================== -->
 
                         {% if delivery_fee == 0 %}
 
-                        <div class="alert alert-success small py-2">
-
+                        <div class="alert alert-success small py-2 mb-3">
                             🎉 You qualify for free delivery.
-
                         </div>
 
                         {% else %}
 
-                        <div class="alert alert-light border small py-2">
+                        <div class="alert alert-light border small py-2 mb-3">
 
-                            Add ₹{{ "%.2f"|format(1000 - subtotal) }}
+                            Add
+                            <strong>
+                                ₹{{ "%.2f"|format(1000 - subtotal) }}
+                            </strong>
                             more to get free delivery.
 
                         </div>
@@ -611,6 +705,10 @@ Checkout - ShopEase
 </div>
 
 
+<!-- =========================================================
+     CHECKOUT JAVASCRIPT
+========================================================= -->
+
 <script>
 
 document.addEventListener(
@@ -632,6 +730,21 @@ document.addEventListener(
                 "newAddressButton"
             );
 
+        const someoneElse =
+            document.getElementById(
+                "someoneElse"
+            );
+
+        const saveAddress =
+            document.getElementById(
+                "saveAddress"
+            );
+
+        const saveAddressHelp =
+            document.getElementById(
+                "saveAddressHelp"
+            );
+
 
         const fullName =
             document.getElementById(
@@ -641,6 +754,11 @@ document.addEventListener(
         const phone =
             document.getElementById(
                 "phone"
+            );
+
+        const email =
+            document.getElementById(
+                "email"
             );
 
         const addressLine =
@@ -662,6 +780,24 @@ document.addEventListener(
             document.getElementById(
                 "pincode"
             );
+
+
+        /* =========================================
+           ACCOUNT INFORMATION
+        ========================================= */
+
+        const accountInfo = {
+
+            full_name:
+                {{ account_name | tojson }},
+
+            phone:
+                {{ account_phone | tojson }},
+
+            email:
+                {{ account_email | tojson }}
+
+        };
 
 
         /* =========================================
@@ -700,6 +836,42 @@ document.addEventListener(
 
 
         /* =========================================
+           CLEAR DELIVERY FIELDS
+        ========================================= */
+
+        function clearDeliveryFields() {
+
+            fullName.value = "";
+            phone.value = "";
+            email.value = "";
+
+            addressLine.value = "";
+            city.value = "";
+            state.value = "";
+            pincode.value = "";
+
+        }
+
+
+        /* =========================================
+           LOAD ACCOUNT INFORMATION
+        ========================================= */
+
+        function loadAccountInformation() {
+
+            fullName.value =
+                accountInfo.full_name;
+
+            phone.value =
+                accountInfo.phone;
+
+            email.value =
+                accountInfo.email;
+
+        }
+
+
+        /* =========================================
            LOAD SAVED ADDRESS
         ========================================= */
 
@@ -721,6 +893,9 @@ document.addEventListener(
             phone.value =
                 address.phone;
 
+            email.value =
+                accountInfo.email;
+
             addressLine.value =
                 address.address_line;
 
@@ -732,6 +907,48 @@ document.addEventListener(
 
             pincode.value =
                 address.pincode;
+
+
+            updateSaveAddressState(
+                true
+            );
+
+        }
+
+
+        /* =========================================
+           SAVE ADDRESS STATE
+        ========================================= */
+
+        function updateSaveAddressState(
+            savedAddressSelected
+        ) {
+
+            if (!saveAddress) {
+                return;
+            }
+
+
+            if (savedAddressSelected) {
+
+                saveAddress.checked =
+                    false;
+
+                saveAddress.disabled =
+                    true;
+
+                saveAddressHelp.textContent =
+                    "This saved address is already stored in your account.";
+
+            } else {
+
+                saveAddress.disabled =
+                    false;
+
+                saveAddressHelp.textContent =
+                    "This address will be saved to your ShopEase account.";
+
+            }
 
         }
 
@@ -747,7 +964,9 @@ document.addEventListener(
                     "change",
                     function () {
 
-                        if (this.checked) {
+                        if (
+                            this.checked
+                        ) {
 
                             loadAddress(
                                 this.value
@@ -777,7 +996,9 @@ document.addEventListener(
                             event.target.tagName ===
                             "INPUT"
                         ) {
+
                             return;
+
                         }
 
 
@@ -825,12 +1046,19 @@ document.addEventListener(
                     );
 
 
-                    fullName.value = "";
-                    phone.value = "";
-                    addressLine.value = "";
-                    city.value = "";
-                    state.value = "";
-                    pincode.value = "";
+                    clearDeliveryFields();
+
+                    updateSaveAddressState(
+                        false
+                    );
+
+
+                    if (someoneElse) {
+
+                        someoneElse.checked =
+                            false;
+
+                    }
 
 
                     fullName.focus();
@@ -842,7 +1070,60 @@ document.addEventListener(
 
 
         /* =========================================
-           LOAD DEFAULT ADDRESS
+           SOMEONE ELSE
+        ========================================= */
+
+        if (someoneElse) {
+
+            someoneElse.addEventListener(
+                "change",
+                function () {
+
+                    if (this.checked) {
+
+                        clearDeliveryFields();
+
+                        updateSaveAddressState(
+                            false
+                        );
+
+                        fullName.focus();
+
+                    } else {
+
+                        const selectedRadio =
+                            document.querySelector(
+                                ".saved-address-radio:checked"
+                            );
+
+
+                        if (selectedRadio) {
+
+                            loadAddress(
+                                selectedRadio.value
+                            );
+
+                        } else {
+
+                            loadAccountInformation();
+
+                            addressLine.value = "";
+                            city.value = "";
+                            state.value = "";
+                            pincode.value = "";
+
+                        }
+
+                    }
+
+                }
+            );
+
+        }
+
+
+        /* =========================================
+           DEFAULT ADDRESS
         ========================================= */
 
         {% for address in addresses %}
@@ -854,7 +1135,10 @@ document.addEventListener(
                 '.saved-address-radio[value="{{ address.id }}"]'
             );
 
-        if (defaultRadio) {
+        if (
+            defaultRadio &&
+            !someoneElse.checked
+        ) {
 
             defaultRadio.checked =
                 true;
@@ -868,6 +1152,25 @@ document.addEventListener(
         {% endif %}
 
         {% endfor %}
+
+
+        /* =========================================
+           INITIAL STATE
+        ========================================= */
+
+        const selectedRadio =
+            document.querySelector(
+                ".saved-address-radio:checked"
+            );
+
+
+        if (!selectedRadio) {
+
+            updateSaveAddressState(
+                false
+            );
+
+        }
 
     }
 

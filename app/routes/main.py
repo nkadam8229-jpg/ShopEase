@@ -24,7 +24,12 @@ from app.models import (
     CartItem,
     Address,
     Order,
-    OrderItem
+    OrderItem,
+    User
+)
+from werkzeug.security import (
+    check_password_hash,
+    generate_password_hash
 )
 
 from decimal import Decimal
@@ -1690,6 +1695,31 @@ def checkout():
 
 
     # -----------------------------------------------------
+    # CURRENT USER
+    # -----------------------------------------------------
+
+    user = (
+        User.query
+        .filter_by(
+            id=user_id
+        )
+        .first()
+    )
+
+
+    if not user:
+
+        flash(
+            "Unable to load your account information.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("auth.login")
+        )
+
+
+    # -----------------------------------------------------
     # SAVED ADDRESSES
     # -----------------------------------------------------
 
@@ -1712,11 +1742,22 @@ def checkout():
 
     return render_template(
         "checkout.html",
+
         cart_items=cart_items,
+
         subtotal=subtotal,
+
         delivery_fee=delivery_fee,
+
         total_amount=total_amount,
-        addresses=addresses
+
+        addresses=addresses,
+
+        account_name=user.full_name,
+
+        account_phone=user.phone,
+
+        account_email=user.email
     )
 
 
@@ -1834,6 +1875,13 @@ def place_order():
             ""
         )
         .strip()
+    )
+
+    save_address = (
+    request.form.get(
+        "save_address"
+    )
+    == "1"
     )
 
 
@@ -2053,28 +2101,64 @@ def place_order():
 
     try:
 
+    # -------------------------------------------------
+    # SAVE NEW ADDRESS
+    # -------------------------------------------------
+
+        if save_address:
+
+            existing_addresses = (
+                Address.query
+                .filter_by(
+                    user_id=user_id
+                )
+                .all()
+            )
+
+            new_address = Address(
+                user_id=user_id,
+                full_name=full_name,
+                phone=phone,
+                address_line=address_line,
+                city=city,
+                state=state,
+                pincode=pincode,
+                is_default=(
+                    len(existing_addresses) == 0
+                )
+            )
+
+            db.session.add(
+                new_address
+            )
+
+
+    # -------------------------------------------------
+    # CREATE ORDER
+    # -------------------------------------------------
+
         order = Order(
-            user_id=user_id,
-            order_number=order_number,
+                user_id=user_id,
+                order_number=order_number,
 
-            subtotal=subtotal,
-            delivery_fee=delivery_fee,
-            total_amount=total_amount,
+                subtotal=subtotal,
+                delivery_fee=delivery_fee,
+                total_amount=total_amount,
 
-            # Payment is not implemented yet.
-            # Existing database requires COD.
-            payment_method="COD",
+                # Payment is not implemented yet.
+                # Existing database requires COD.
+                payment_method="COD",
 
-            status="CONFIRMED",
+                status="PENDING",
 
-            shipping_full_name=full_name,
-            shipping_phone=phone,
-            shipping_email=email,
-            shipping_address_line=address_line,
-            shipping_city=city,
-            shipping_state=state,
-            shipping_pincode=pincode
-        )
+                shipping_full_name=full_name,
+                shipping_phone=phone,
+                shipping_email=email,
+                shipping_address_line=address_line,
+                shipping_city=city,
+                shipping_state=state,
+                shipping_pincode=pincode
+            )
 
         db.session.add(order)
 
@@ -2180,5 +2264,832 @@ def place_order():
         url_for(
             "main.order_confirmation",
             order_number=order.order_number
+        )
+    )
+
+# =========================================================
+# ORDER CONFIRMATION / ORDER DETAILS
+# =========================================================
+
+@main_bp.route(
+    "/orders/<string:order_number>"
+)
+def order_confirmation(order_number):
+
+    # -----------------------------------------------------
+    # LOGIN REQUIRED
+    # -----------------------------------------------------
+
+    user_id = session.get("user_id")
+
+    if not user_id:
+
+        flash(
+            "Please login to view your order.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("auth.login")
+        )
+
+
+    # -----------------------------------------------------
+    # GET ORDER
+    #
+    # Only allow the logged-in customer to view their
+    # own order.
+    # -----------------------------------------------------
+
+    order = (
+        Order.query
+        .filter_by(
+            order_number=order_number,
+            user_id=user_id
+        )
+        .first()
+    )
+
+
+    if not order:
+
+        flash(
+            "Order not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("main.cart")
+        )
+
+
+    # -----------------------------------------------------
+    # SIMULATED ORDER STATUS
+    #
+    # 0:00  - PENDING
+    # 0:30  - CONFIRMED
+    # 2:30  - OUT FOR DELIVERY
+    # 4:30  - DELIVERED
+    # -----------------------------------------------------
+
+    if order.created_at:
+
+        elapsed_seconds = (
+            datetime.utcnow()
+            - order.created_at
+        ).total_seconds()
+
+    else:
+
+        elapsed_seconds = 0
+
+
+    if elapsed_seconds >= 270:
+
+        simulated_status = "DELIVERED"
+
+    elif elapsed_seconds >= 150:
+
+        simulated_status = "SHIPPED"
+
+    elif elapsed_seconds >= 30:
+
+        simulated_status = "CONFIRMED"
+
+    else:
+
+        simulated_status = "PENDING"
+
+
+    # -----------------------------------------------------
+    # UPDATE DATABASE STATUS
+    #
+    # This keeps the database synchronized with the
+    # simulated delivery progression.
+    # -----------------------------------------------------
+
+    if order.status != simulated_status:
+
+        order.status = simulated_status
+
+        db.session.commit()
+
+
+    # -----------------------------------------------------
+    # DISPLAY STATUS
+    #
+    # Database uses SHIPPED, but the customer sees:
+    # OUT FOR DELIVERY
+    # -----------------------------------------------------
+
+    if simulated_status == "SHIPPED":
+
+        display_status = "OUT FOR DELIVERY"
+
+    else:
+
+        display_status = simulated_status
+
+
+    # -----------------------------------------------------
+    # ORDER ITEMS
+    # -----------------------------------------------------
+
+    order_items = (
+        OrderItem.query
+        .filter_by(
+            order_id=order.id
+        )
+        .all()
+    )
+
+
+    # -----------------------------------------------------
+    # RENDER ORDER DETAILS
+    # -----------------------------------------------------
+
+    return render_template(
+        "order_confirmation.html",
+
+        order=order,
+
+        order_items=order_items,
+
+        display_status=display_status
+    )
+
+# =========================================================
+# CUSTOMER PROFILE
+# =========================================================
+
+@main_bp.route("/profile")
+def profile():
+
+    # -----------------------------------------------------
+    # LOGIN REQUIRED
+    # -----------------------------------------------------
+
+    user_id = session.get("user_id")
+
+    if not user_id:
+
+        flash(
+            "Please login to access your profile.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("auth.login")
+        )
+
+
+    # -----------------------------------------------------
+    # USER
+    # -----------------------------------------------------
+
+    user = (
+        User.query
+        .filter_by(id=user_id)
+        .first()
+    )
+
+    if not user:
+
+        session.clear()
+
+        flash(
+            "Your account could not be found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("auth.login")
+        )
+
+
+    # -----------------------------------------------------
+    # SAVED ADDRESSES
+    # -----------------------------------------------------
+
+    addresses = (
+        Address.query
+        .filter_by(user_id=user_id)
+        .order_by(
+            Address.is_default.desc(),
+            Address.created_at.desc()
+        )
+        .all()
+    )
+
+
+    # -----------------------------------------------------
+    # ORDERS
+    # -----------------------------------------------------
+
+    orders = (
+        Order.query
+        .filter_by(user_id=user_id)
+        .order_by(
+            Order.created_at.desc()
+        )
+        .all()
+    )
+
+    order_items_map = {}
+
+    for order in orders:
+
+        order_items_map[order.id] = (
+            OrderItem.query
+            .filter_by(
+                order_id=order.id
+            )
+            .all()
+        )
+
+
+    # -----------------------------------------------------
+    # SIMULATED ORDER STATUS
+    # -----------------------------------------------------
+
+    for order in orders:
+
+        if order.created_at:
+
+            elapsed_seconds = (
+                datetime.utcnow()
+                - order.created_at
+            ).total_seconds()
+
+        else:
+
+            elapsed_seconds = 0
+
+
+        if elapsed_seconds >= 270:
+
+            simulated_status = "DELIVERED"
+
+        elif elapsed_seconds >= 150:
+
+            simulated_status = "SHIPPED"
+
+        elif elapsed_seconds >= 30:
+
+            simulated_status = "CONFIRMED"
+
+        else:
+
+            simulated_status = "PENDING"
+
+
+        if order.status != simulated_status:
+
+            order.status = simulated_status
+
+
+        if simulated_status == "SHIPPED":
+
+            order.display_status = "OUT FOR DELIVERY"
+
+        else:
+
+            order.display_status = simulated_status
+
+
+    db.session.commit()
+
+
+    # -----------------------------------------------------
+    # CURRENT PROFILE SECTION
+    # -----------------------------------------------------
+
+    section = request.args.get(
+        "section",
+        "profile"
+    )
+
+    if section not in (
+        "profile",
+        "orders",
+        "addresses"
+    ):
+
+        section = "profile"
+
+
+    return render_template(
+        "profile.html",
+        user=user,
+        addresses=addresses,
+        orders=orders,
+        order_items_map=order_items_map,
+        section=section
+    )
+
+
+# =========================================================
+# CHANGE PASSWORD
+# =========================================================
+
+@main_bp.route(
+    "/profile/change-password",
+    methods=["POST"]
+)
+def change_password():
+
+    user_id = session.get("user_id")
+
+    if not user_id:
+
+        flash(
+            "Please login to continue.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("auth.login")
+        )
+
+
+    user = (
+        User.query
+        .filter_by(id=user_id)
+        .first()
+    )
+
+
+    if not user:
+
+        session.clear()
+
+        return redirect(
+            url_for("auth.login")
+        )
+
+
+    current_password = request.form.get(
+        "current_password",
+        ""
+    )
+
+    new_password = request.form.get(
+        "new_password",
+        ""
+    )
+
+    confirm_password = request.form.get(
+        "confirm_password",
+        ""
+    )
+
+
+    if not check_password_hash(
+        user.password_hash,
+        current_password
+    ):
+
+        flash(
+            "Current password is incorrect.",
+            "danger"
+        )
+
+        return redirect(
+            url_for(
+                "main.profile",
+                section="profile"
+            )
+        )
+
+
+    if len(new_password) < 8:
+
+        flash(
+            "New password must contain at least 8 characters.",
+            "warning"
+        )
+
+        return redirect(
+            url_for(
+                "main.profile",
+                section="profile"
+            )
+        )
+
+
+    if new_password != confirm_password:
+
+        flash(
+            "New passwords do not match.",
+            "warning"
+        )
+
+        return redirect(
+            url_for(
+                "main.profile",
+                section="profile"
+            )
+        )
+
+
+    user.password_hash = (
+        generate_password_hash(
+            new_password
+        )
+    )
+
+
+    db.session.commit()
+
+
+    flash(
+        "Password changed successfully.",
+        "success"
+    )
+
+
+    return redirect(
+        url_for(
+            "main.profile",
+            section="profile"
+        )
+    )
+
+
+# =========================================================
+# ADD ADDRESS
+# =========================================================
+
+@main_bp.route(
+    "/profile/address/add",
+    methods=["POST"]
+)
+def add_profile_address():
+
+    user_id = session.get("user_id")
+
+    if not user_id:
+
+        return redirect(
+            url_for("auth.login")
+        )
+
+
+    full_name = request.form.get(
+        "full_name",
+        ""
+    ).strip()
+
+    phone = request.form.get(
+        "phone",
+        ""
+    ).strip()
+
+    address_line = request.form.get(
+        "address_line",
+        ""
+    ).strip()
+
+    city = request.form.get(
+        "city",
+        ""
+    ).strip()
+
+    state = request.form.get(
+        "state",
+        ""
+    ).strip()
+
+    pincode = request.form.get(
+        "pincode",
+        ""
+    ).strip()
+
+
+    if not all([
+        full_name,
+        phone,
+        address_line,
+        city,
+        state,
+        pincode
+    ]):
+
+        flash(
+            "Please complete all address fields.",
+            "warning"
+        )
+
+        return redirect(
+            url_for(
+                "main.profile",
+                section="addresses"
+            )
+        )
+
+
+    existing_count = (
+        Address.query
+        .filter_by(user_id=user_id)
+        .count()
+    )
+
+
+    address = Address(
+
+        user_id=user_id,
+
+        full_name=full_name,
+
+        phone=phone,
+
+        address_line=address_line,
+
+        city=city,
+
+        state=state,
+
+        pincode=pincode,
+
+        is_default=(
+            existing_count == 0
+        )
+    )
+
+
+    db.session.add(address)
+
+    db.session.commit()
+
+
+    flash(
+        "Address saved successfully.",
+        "success"
+    )
+
+
+    return redirect(
+        url_for(
+            "main.profile",
+            section="addresses"
+        )
+    )
+
+
+# =========================================================
+# EDIT ADDRESS
+# =========================================================
+
+@main_bp.route(
+    "/profile/address/<int:address_id>/edit",
+    methods=["POST"]
+)
+def edit_profile_address(address_id):
+
+    user_id = session.get("user_id")
+
+
+    if not user_id:
+
+        return redirect(
+            url_for("auth.login")
+        )
+
+
+    address = (
+        Address.query
+        .filter_by(
+            id=address_id,
+            user_id=user_id
+        )
+        .first()
+    )
+
+
+    if not address:
+
+        flash(
+            "Address not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for(
+                "main.profile",
+                section="addresses"
+            )
+        )
+
+
+    address.full_name = request.form.get(
+        "full_name",
+        ""
+    ).strip()
+
+    address.phone = request.form.get(
+        "phone",
+        ""
+    ).strip()
+
+    address.address_line = request.form.get(
+        "address_line",
+        ""
+    ).strip()
+
+    address.city = request.form.get(
+        "city",
+        ""
+    ).strip()
+
+    address.state = request.form.get(
+        "state",
+        ""
+    ).strip()
+
+    address.pincode = request.form.get(
+        "pincode",
+        ""
+    ).strip()
+
+
+    db.session.commit()
+
+
+    flash(
+        "Address updated successfully.",
+        "success"
+    )
+
+
+    return redirect(
+        url_for(
+            "main.profile",
+            section="addresses"
+        )
+    )
+
+
+# =========================================================
+# DELETE ADDRESS
+# =========================================================
+
+@main_bp.route(
+    "/profile/address/<int:address_id>/delete",
+    methods=["POST"]
+)
+def delete_profile_address(address_id):
+
+    user_id = session.get("user_id")
+
+
+    if not user_id:
+
+        return redirect(
+            url_for("auth.login")
+        )
+
+
+    address = (
+        Address.query
+        .filter_by(
+            id=address_id,
+            user_id=user_id
+        )
+        .first()
+    )
+
+
+    if not address:
+
+        flash(
+            "Address not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for(
+                "main.profile",
+                section="addresses"
+            )
+        )
+
+
+    was_default = address.is_default
+
+
+    db.session.delete(address)
+
+    db.session.flush()
+
+
+    # -----------------------------------------------------
+    # IF DEFAULT ADDRESS WAS DELETED,
+    # MAKE THE MOST RECENT REMAINING ADDRESS DEFAULT
+    # -----------------------------------------------------
+
+    if was_default:
+
+        next_address = (
+            Address.query
+            .filter_by(user_id=user_id)
+            .order_by(
+                Address.created_at.desc()
+            )
+            .first()
+        )
+
+
+        if next_address:
+
+            next_address.is_default = True
+
+
+    db.session.commit()
+
+
+    flash(
+        "Address deleted successfully.",
+        "success"
+    )
+
+
+    return redirect(
+        url_for(
+            "main.profile",
+            section="addresses"
+        )
+    )
+
+
+# =========================================================
+# SET DEFAULT ADDRESS
+# =========================================================
+
+@main_bp.route(
+    "/profile/address/<int:address_id>/default",
+    methods=["POST"]
+)
+def set_default_address(address_id):
+
+    user_id = session.get("user_id")
+
+
+    if not user_id:
+
+        return redirect(
+            url_for("auth.login")
+        )
+
+
+    address = (
+        Address.query
+        .filter_by(
+            id=address_id,
+            user_id=user_id
+        )
+        .first()
+    )
+
+
+    if not address:
+
+        flash(
+            "Address not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for(
+                "main.profile",
+                section="addresses"
+            )
+        )
+
+
+    Address.query.filter_by(
+        user_id=user_id
+    ).update(
+        {
+            Address.is_default: False
+        }
+    )
+
+
+    address.is_default = True
+
+
+    db.session.commit()
+
+
+    flash(
+        "Default address updated.",
+        "success"
+    )
+
+
+    return redirect(
+        url_for(
+            "main.profile",
+            section="addresses"
         )
     )

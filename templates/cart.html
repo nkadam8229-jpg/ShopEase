@@ -67,21 +67,31 @@
 
                             {% if item.product.images %}
 
-                                <img
-                                    src="{{ url_for(
-                                        'main.product_image',
-                                        image_id=item.product.images[0].id
-                                    ) }}"
-                                    class="img-fluid rounded"
-                                    alt="{{ item.product.name }}"
-                                    style="
-                                        width: 100%;
-                                        height: 100px;
-                                        object-fit: contain;
-                                    "
-                                >
+    <a
+        href="{{ url_for(
+            'main.product_detail',
+            slug=item.product.slug
+        ) }}"
+        class="d-block"
+    >
 
-                            {% else %}
+        <img
+            src="{{ url_for(
+                'main.product_image',
+                image_id=item.product.images[0].id
+            ) }}"
+            class="img-fluid rounded"
+            alt="{{ item.product.name }}"
+            style="
+                width: 100%;
+                height: 100px;
+                object-fit: contain;
+            "
+        >
+
+    </a>
+
+{% else %}
 
                                 <div
                                     class="bg-light rounded d-flex
@@ -101,8 +111,18 @@
                         <div class="col-9 col-md-5">
 
                             <h5 class="fw-semibold mb-1">
-                                {{ item.product.name }}
-                            </h5>
+
+    <a
+        href="{{ url_for(
+            'main.product_detail',
+            slug=item.product.slug
+        ) }}"
+        class="text-decoration-none text-dark"
+    >
+        {{ item.product.name }}
+    </a>
+
+</h5>
 
 
                             {% if item.product_size %}
@@ -320,17 +340,16 @@
 
                     </div>
 
-                    <button
-                        type="button"
-                        class="btn btn-primary w-100 py-2"
-                        disabled
-                    >
-                        Proceed to Checkout
-                    </button>
+                    <a
+    href="{{ url_for('main.checkout') }}"
+    class="btn btn-primary w-100 py-2"
+>
+    Proceed to Checkout
+</a>
 
-                    <p class="text-muted small text-center mt-3 mb-0">
-                        Checkout will be added later.
-                    </p>
+<p class="text-muted small text-center mt-3 mb-0">
+    Review your delivery details before placing the order.
+</p>
 
                 </div>
 

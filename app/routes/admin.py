@@ -8,6 +8,7 @@ from flask import (
     url_for
 )
 
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash
 
@@ -20,7 +21,10 @@ from app.models import (
     Product,
     ProductImage,
     ProductSize,
-    Banner
+    Banner,
+    User,
+    Order,
+    OrderItem
 )
 from app.services.upload_service import upload_image
 from app.services.storage_service import StorageService
@@ -4322,10 +4326,353 @@ def users():
     if "admin_id" not in session:
         return redirect(url_for("admin.login"))
 
-    return render_template(
-        "admin/users.html"
+    # -----------------------------------------------------
+    # GET USERS WITH ORDER COUNT
+    # -----------------------------------------------------
+
+    results = (
+        db.session.query(
+            User,
+            func.count(Order.id).label(
+                "order_count"
+            )
+        )
+        .outerjoin(
+            Order,
+            User.id == Order.user_id
+        )
+        .group_by(
+            User.id
+        )
+        .order_by(
+            User.created_at.desc()
+        )
+        .all()
     )
 
+
+    # -----------------------------------------------------
+    # PREPARE USER DATA FOR TEMPLATE
+    # -----------------------------------------------------
+
+    users = []
+
+    for user, order_count in results:
+
+        users.append(
+            {
+                "user": user,
+                "order_count": order_count
+            }
+        )
+
+
+    return render_template(
+        "admin/users.html",
+        users=users
+    )
+
+# =========================================================
+# USER DETAILS
+# =========================================================
+
+@admin_bp.route(
+    "/users/<int:user_id>"
+)
+def user_details(user_id):
+
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    # -----------------------------------------------------
+    # GET USER
+    # -----------------------------------------------------
+
+    user = db.session.get(
+        User,
+        user_id
+    )
+
+    if not user:
+
+        flash(
+            "User not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("admin.users")
+        )
+
+    # -----------------------------------------------------
+    # GET ALL ORDERS OF THIS USER
+    # -----------------------------------------------------
+
+    orders = (
+        Order.query
+        .filter(
+            Order.user_id == user.id
+        )
+        .order_by(
+            Order.created_at.desc()
+        )
+        .all()
+    )
+
+    # -----------------------------------------------------
+    # GET ITEMS + PRODUCT IMAGES FOR EACH ORDER
+    # -----------------------------------------------------
+
+    order_items = {}
+    order_item_images = {}
+
+    for order in orders:
+
+        items = (
+            OrderItem.query
+            .filter(
+                OrderItem.order_id == order.id
+            )
+            .order_by(
+                OrderItem.id.asc()
+            )
+            .all()
+        )
+
+        order_items[order.id] = items
+
+        # ---------------------------------------------
+        # FIND PRODUCT IMAGE FOR EACH ORDER ITEM
+        # ---------------------------------------------
+
+        for item in items:
+
+            if not item.product_id:
+                continue
+
+            image = (
+                ProductImage.query
+                .filter(
+                    ProductImage.product_id == item.product_id
+                )
+                .order_by(
+                    ProductImage.is_primary.desc(),
+                    ProductImage.display_order.asc(),
+                    ProductImage.id.asc()
+                )
+                .first()
+            )
+
+            order_item_images[item.id] = image
+
+    # -----------------------------------------------------
+    # RENDER ONE COMPLETE USER PAGE
+    # -----------------------------------------------------
+
+    return render_template(
+        "admin/user_details.html",
+        user=user,
+        orders=orders,
+        order_items=order_items,
+        order_item_images=order_item_images
+    )
+
+# =========================================================
+# TOGGLE USER ACCOUNT STATUS
+# =========================================================
+
+@admin_bp.route(
+    "/users/<int:user_id>/toggle",
+    methods=["POST"]
+)
+def toggle_user(user_id):
+
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    user = db.session.get(
+        User,
+        user_id
+    )
+
+    if not user:
+
+        flash(
+            "User not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("admin.users")
+        )
+
+    # Toggle account status
+    user.is_active = not user.is_active
+
+    try:
+
+        db.session.commit()
+
+    except Exception:
+
+        db.session.rollback()
+
+        flash(
+            "Unable to update user account status.",
+            "danger"
+        )
+
+        return redirect(
+            url_for(
+                "admin.user_details",
+                user_id=user.id
+            )
+        )
+
+    if user.is_active:
+
+        flash(
+            f"{user.full_name} has been activated.",
+            "success"
+        )
+
+    else:
+
+        flash(
+            f"{user.full_name} has been deactivated.",
+            "success"
+        )
+
+    return redirect(
+        url_for(
+            "admin.user_details",
+            user_id=user.id
+        )
+    )
+
+# =========================================================
+# ORDER MANAGEMENT
+# =========================================================
+
+@admin_bp.route("/orders")
+def orders():
+
+    if "admin_id" not in session:
+        return redirect(
+            url_for("admin.login")
+        )
+
+    # -----------------------------------------------------
+    # SEARCH
+    # -----------------------------------------------------
+
+    search = request.args.get(
+        "search",
+        ""
+    ).strip()
+
+
+    # -----------------------------------------------------
+    # STATUS FILTER
+    # -----------------------------------------------------
+
+    status = request.args.get(
+        "status",
+        ""
+    ).strip().upper()
+
+
+    # -----------------------------------------------------
+    # BASE QUERY
+    # -----------------------------------------------------
+
+    query = (
+        Order.query
+        .join(
+            User,
+            Order.user_id == User.id
+        )
+    )
+
+
+    # -----------------------------------------------------
+    # SEARCH
+    #
+    # Order number
+    # Customer name
+    # Email
+    # Phone
+    # -----------------------------------------------------
+
+    if search:
+
+        search_pattern = (
+            f"%{search}%"
+        )
+
+        query = query.filter(
+            db.or_(
+                Order.order_number.ilike(
+                    search_pattern
+                ),
+
+                User.full_name.ilike(
+                    search_pattern
+                ),
+
+                User.email.ilike(
+                    search_pattern
+                ),
+
+                User.phone.ilike(
+                    search_pattern
+                )
+            )
+        )
+
+
+    # -----------------------------------------------------
+    # STATUS FILTER
+    # -----------------------------------------------------
+
+    allowed_statuses = {
+        "PENDING",
+        "CONFIRMED",
+        "SHIPPED",
+        "DELIVERED"
+    }
+
+
+    if status in allowed_statuses:
+
+        query = query.filter(
+            Order.status == status
+        )
+
+    else:
+
+        status = ""
+
+
+    # -----------------------------------------------------
+    # GET ORDERS
+    # -----------------------------------------------------
+
+    orders = (
+        query
+        .order_by(
+            Order.created_at.desc()
+        )
+        .all()
+    )
+
+
+    return render_template(
+        "admin/orders.html",
+        orders=orders,
+        search=search,
+        status=status
+    )
 # =========================================================
 # BANNER MANAGEMENT
 # =========================================================

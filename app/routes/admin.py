@@ -1696,13 +1696,42 @@ def products():
 
     products = (
         Product.query
-        .order_by(Product.created_at.desc())
+        .order_by(
+            Product.created_at.desc()
+        )
+        .all()
+    )
+
+    categories = (
+        Category.query
+        .order_by(
+            Category.name.asc()
+        )
+        .all()
+    )
+
+    subcategories = (
+        Subcategory.query
+        .order_by(
+            Subcategory.name.asc()
+        )
+        .all()
+    )
+
+    brands = (
+        Brand.query
+        .order_by(
+            Brand.name.asc()
+        )
         .all()
     )
 
     return render_template(
         "admin/products.html",
-        products=products
+        products=products,
+        categories=categories,
+        subcategories=subcategories,
+        brands=brands
     )
 
 
@@ -2983,10 +3012,8 @@ def product_image_view(
     from flask import send_file
 
     return send_file(
-        image_path,
-        mimetype="image/webp"
-    )
-
+    image_path
+)
 # =========================================================
 # SET PRIMARY PRODUCT IMAGE
 # =========================================================
@@ -4672,6 +4699,580 @@ def orders():
         orders=orders,
         search=search,
         status=status
+    )
+
+# =========================================================
+# REVENUE MANAGEMENT
+# =========================================================
+
+@admin_bp.route("/revenue")
+def revenue():
+
+    if "admin_id" not in session:
+        return redirect(
+            url_for("admin.login")
+        )
+
+    from datetime import datetime
+
+    # -----------------------------------------------------
+    # SELECTED REVENUE SECTION
+    # -----------------------------------------------------
+    #
+    # overview     -> overall revenue + graph
+    # category     -> category-wise revenue
+    # subcategory  -> subcategory-wise revenue
+    #
+    # The Revenue page will display only one section
+    # at a time.
+    # -----------------------------------------------------
+
+    section = request.args.get(
+        "section",
+        "overview"
+    ).strip().lower()
+
+    allowed_sections = {
+        "overview",
+        "category",
+        "subcategory"
+    }
+
+    if section not in allowed_sections:
+        section = "overview"
+
+    # -----------------------------------------------------
+    # ONLY DELIVERED ORDERS COUNT AS REVENUE
+    # -----------------------------------------------------
+
+    delivered_orders = (
+        Order.query
+        .filter(
+            Order.status == "DELIVERED"
+        )
+        .order_by(
+            Order.created_at.asc()
+        )
+        .all()
+    )
+
+    # -----------------------------------------------------
+    # BASIC REVENUE TOTAL
+    # -----------------------------------------------------
+
+    total_revenue = sum(
+        float(order.total_amount or 0)
+        for order in delivered_orders
+    )
+
+    # -----------------------------------------------------
+    # TODAY
+    # -----------------------------------------------------
+
+    today = datetime.now().date()
+
+    today_revenue = sum(
+        float(order.total_amount or 0)
+        for order in delivered_orders
+        if (
+            order.created_at
+            and order.created_at.date() == today
+        )
+    )
+
+    # -----------------------------------------------------
+    # CURRENT MONTH
+    # -----------------------------------------------------
+
+    current_year = today.year
+    current_month = today.month
+
+    monthly_revenue_value = sum(
+        float(order.total_amount or 0)
+        for order in delivered_orders
+        if (
+            order.created_at
+            and order.created_at.year == current_year
+            and order.created_at.month == current_month
+        )
+    )
+
+    # -----------------------------------------------------
+    # CURRENT QUARTER
+    # -----------------------------------------------------
+
+    current_quarter = (
+        (today.month - 1) // 3
+    ) + 1
+
+    quarter_start_month = (
+        (current_quarter - 1) * 3
+    ) + 1
+
+    quarter_revenue = sum(
+        float(order.total_amount or 0)
+        for order in delivered_orders
+        if (
+            order.created_at
+            and order.created_at.year == current_year
+            and quarter_start_month
+            <= order.created_at.month
+            <= quarter_start_month + 2
+        )
+    )
+
+    # -----------------------------------------------------
+    # DAILY REVENUE
+    # -----------------------------------------------------
+
+    daily_data = {}
+
+    for order in delivered_orders:
+
+        if not order.created_at:
+            continue
+
+        date_key = (
+            order.created_at.date()
+        )
+
+        if date_key not in daily_data:
+
+            daily_data[date_key] = {
+                "label": order.created_at.strftime(
+                    "%d %b"
+                ),
+                "revenue": 0
+            }
+
+        daily_data[date_key]["revenue"] += (
+            float(order.total_amount or 0)
+        )
+
+    daily_revenue = [
+        {
+            "label": data["label"],
+            "revenue": round(
+                data["revenue"],
+                2
+            )
+        }
+        for key, data in sorted(
+            daily_data.items()
+        )
+    ]
+
+    # Latest 14 revenue days
+    daily_revenue = daily_revenue[-14:]
+
+    # -----------------------------------------------------
+    # MONTHLY REVENUE
+    # -----------------------------------------------------
+
+    monthly_data = {}
+
+    for order in delivered_orders:
+
+        if not order.created_at:
+            continue
+
+        month_key = (
+            order.created_at.strftime(
+                "%Y-%m"
+            )
+        )
+
+        if month_key not in monthly_data:
+
+            monthly_data[month_key] = {
+                "label": order.created_at.strftime(
+                    "%b %Y"
+                ),
+                "revenue": 0
+            }
+
+        monthly_data[month_key]["revenue"] += (
+            float(order.total_amount or 0)
+        )
+
+    monthly_revenue = [
+        {
+            "label": data["label"],
+            "revenue": round(
+                data["revenue"],
+                2
+            )
+        }
+        for key, data in sorted(
+            monthly_data.items()
+        )
+    ]
+
+    # Latest 12 months
+    monthly_revenue = monthly_revenue[-12:]
+
+    # -----------------------------------------------------
+    # QUARTERLY REVENUE
+    # -----------------------------------------------------
+
+    quarterly_data = {}
+
+    for order in delivered_orders:
+
+        if not order.created_at:
+            continue
+
+        order_year = order.created_at.year
+
+        order_quarter = (
+            (order.created_at.month - 1) // 3
+        ) + 1
+
+        quarter_key = (
+            order_year,
+            order_quarter
+        )
+
+        if quarter_key not in quarterly_data:
+
+            quarterly_data[quarter_key] = {
+                "label": (
+                    f"Q{order_quarter} "
+                    f"{order_year}"
+                ),
+                "revenue": 0
+            }
+
+        quarterly_data[quarter_key]["revenue"] += (
+            float(order.total_amount or 0)
+        )
+
+    quarterly_revenue = [
+        {
+            "label": data["label"],
+            "revenue": round(
+                data["revenue"],
+                2
+            )
+        }
+        for key, data in sorted(
+            quarterly_data.items()
+        )
+    ]
+
+    # Latest 8 quarters
+    quarterly_revenue = quarterly_revenue[-8:]
+
+    # -----------------------------------------------------
+    # CATEGORY REVENUE
+    # -----------------------------------------------------
+
+    category_data = {}
+
+    for order in delivered_orders:
+
+        for item in order.items:
+
+            product = item.product
+
+            if not product:
+                continue
+
+            category = product.category
+
+            if not category:
+                continue
+
+            category_id = category.id
+
+            if category_id not in category_data:
+
+                category_data[category_id] = {
+                    "id": category.id,
+                    "name": category.name,
+                    "image_url": url_for(
+                        "admin.category_image",
+                        category_id=category.id
+                    )
+                    if category.image_key
+                    else None,
+                    "revenue": 0,
+                    "items": 0
+                }
+
+            category_data[category_id]["revenue"] += (
+                float(item.total_price or 0)
+            )
+
+            category_data[category_id]["items"] += (
+                int(item.quantity or 0)
+            )
+
+    category_revenue = sorted(
+        category_data.values(),
+        key=lambda item: item["revenue"],
+        reverse=True
+    )
+
+    for category in category_revenue:
+
+        category["revenue"] = round(
+            category["revenue"],
+            2
+        )
+
+    # -----------------------------------------------------
+    # SUBCATEGORY REVENUE
+    # -----------------------------------------------------
+    #
+    # All subcategories are kept in ONE ranking.
+    #
+    # They are NOT grouped under categories.
+    #
+    # Each row contains:
+    # - image
+    # - subcategory
+    # - parent category
+    # - revenue
+    # - quantity sold
+    # - most sold product
+    # -----------------------------------------------------
+
+    subcategory_data = {}
+
+    for order in delivered_orders:
+
+        for item in order.items:
+
+            product = item.product
+
+            if not product:
+                continue
+
+            subcategory = (
+                product.subcategory
+            )
+
+            if not subcategory:
+                continue
+
+            subcategory_id = (
+                subcategory.id
+            )
+
+            if (
+                subcategory_id
+                not in subcategory_data
+            ):
+
+                parent_category = (
+                    subcategory.category
+                )
+
+                subcategory_data[
+                    subcategory_id
+                ] = {
+                    "id": subcategory.id,
+                    "name": subcategory.name,
+                    "image_url": url_for(
+                        "admin.subcategory_image",
+                        subcategory_id=subcategory.id
+                    )
+                    if subcategory.image_key
+                    else None,
+                    "category_name": (
+                        parent_category.name
+                        if parent_category
+                        else "—"
+                    ),
+                    "revenue": 0,
+                    "items": 0,
+                    "products": {}
+                }
+
+            subcategory_data[
+                subcategory_id
+            ]["revenue"] += (
+                float(item.total_price or 0)
+            )
+
+            subcategory_data[
+                subcategory_id
+            ]["items"] += (
+                int(item.quantity or 0)
+            )
+
+            # -------------------------------------------------
+            # MOST SOLD PRODUCT
+            # -------------------------------------------------
+
+            product_id = (
+                product.id
+            )
+
+            if (
+                product_id
+                not in subcategory_data[
+                    subcategory_id
+                ]["products"]
+            ):
+
+                image = (
+                    ProductImage.query
+                    .filter(
+                        ProductImage.product_id
+                        == product.id
+                    )
+                    .order_by(
+                        ProductImage.is_primary.desc(),
+                        ProductImage.display_order.asc(),
+                        ProductImage.id.asc()
+                    )
+                    .first()
+                )
+
+                subcategory_data[
+                    subcategory_id
+                ]["products"][product_id] = {
+                    "id": product.id,
+                    "name": (
+                        item.product_name
+                        or product.name
+                    ),
+                    "quantity": 0,
+                    "image_url": (
+                        url_for(
+                            "admin.product_image_view",
+                            product_id=product.id,
+                            image_id=image.id
+                        )
+                        + f"?v={image.id}"
+                    )
+                    if image
+                    else None
+                }
+
+            subcategory_data[
+                subcategory_id
+            ]["products"][
+                product_id
+            ]["quantity"] += (
+                int(item.quantity or 0)
+            )
+
+    # -----------------------------------------------------
+    # PREPARE SUBCATEGORY LIST
+    # -----------------------------------------------------
+
+    subcategory_revenue = []
+
+    for data in subcategory_data.values():
+
+        products = list(
+            data["products"].values()
+        )
+
+        products.sort(
+            key=lambda product: product["quantity"],
+            reverse=True
+        )
+
+        most_sold_product = (
+            products[0]
+            if products
+            else None
+        )
+
+        subcategory_revenue.append(
+            {
+                "id": data["id"],
+                "name": data["name"],
+                "image_url": data["image_url"],
+                "category_name": data[
+                    "category_name"
+                ],
+                "revenue": round(
+                    data["revenue"],
+                    2
+                ),
+                "items": data["items"],
+                "most_sold_product": (
+                    most_sold_product
+                )
+            }
+        )
+
+    subcategory_revenue.sort(
+        key=lambda item: item["revenue"],
+        reverse=True
+    )
+
+    # -----------------------------------------------------
+    # SUBCATEGORY GRAPH DATA
+    # -----------------------------------------------------
+
+    subcategory_graph = [
+        {
+            "label": item["name"],
+            "revenue": item["revenue"]
+        }
+        for item in subcategory_revenue
+    ]
+
+    # -----------------------------------------------------
+    # CATEGORY GRAPH DATA
+    # -----------------------------------------------------
+
+    category_graph = [
+        {
+            "label": item["name"],
+            "revenue": item["revenue"]
+        }
+        for item in category_revenue
+    ]
+
+    # -----------------------------------------------------
+    # RENDER REVENUE PAGE
+    # -----------------------------------------------------
+
+    return render_template(
+        "admin/revenue.html",
+
+        section=section,
+
+        total_revenue=round(
+            total_revenue,
+            2
+        ),
+
+        today_revenue=round(
+            today_revenue,
+            2
+        ),
+
+        monthly_revenue_value=round(
+            monthly_revenue_value,
+            2
+        ),
+
+        quarter_revenue=round(
+            quarter_revenue,
+            2
+        ),
+
+        daily_revenue=daily_revenue,
+
+        monthly_revenue=monthly_revenue,
+
+        quarterly_revenue=quarterly_revenue,
+
+        category_revenue=category_revenue,
+
+        category_graph=category_graph,
+
+        subcategory_revenue=subcategory_revenue,
+
+        subcategory_graph=subcategory_graph
     )
 # =========================================================
 # BANNER MANAGEMENT

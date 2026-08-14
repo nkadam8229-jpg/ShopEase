@@ -1,0 +1,1415 @@
+{% extends "admin/base.html" %}
+
+{% block title %}
+Revenue | ShopEase Admin
+{% endblock %}
+
+{% block content %}
+
+<style>
+
+    /* =====================================================
+       REVENUE PAGE
+    ===================================================== */
+
+    .revenue-page {
+        padding: 18px 22px 28px;
+    }
+
+    .revenue-header {
+        margin-bottom: 14px;
+    }
+
+    .revenue-header h2 {
+        margin: 0;
+        font-size: 25px;
+        font-weight: 700;
+    }
+
+    .revenue-header p {
+        margin: 3px 0 0;
+        color: #6c757d;
+        font-size: 13px;
+    }
+
+
+    /* =====================================================
+       SECTION TABS
+    ===================================================== */
+
+    .revenue-tabs {
+        display: flex;
+        gap: 8px;
+        border-bottom: 1px solid #dee2e6;
+        margin-bottom: 16px;
+        overflow: hidden;
+    }
+
+    .revenue-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 9px 15px;
+        border: 1px solid transparent;
+        border-bottom: 2px solid transparent;
+        color: #6c757d;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .revenue-tab:hover {
+        color: #0d6efd;
+        text-decoration: none;
+    }
+
+    .revenue-tab.active {
+        color: #0d6efd;
+        border-bottom-color: #0d6efd;
+    }
+
+
+    /* =====================================================
+       SUMMARY CARDS
+    ===================================================== */
+
+    .summary-card {
+        height: 100%;
+        padding: 14px 16px;
+        border: 1px solid #e9ecef;
+        border-radius: 9px;
+        background: #fff;
+        box-shadow: 0 2px 7px rgba(0, 0, 0, 0.04);
+    }
+
+    .summary-label {
+        color: #6c757d;
+        font-size: 12px;
+        margin-bottom: 4px;
+    }
+
+    .summary-value {
+        font-size: 21px;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+
+
+    /* =====================================================
+       COMMON PANEL
+    ===================================================== */
+
+    .revenue-panel {
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 9px;
+        box-shadow: 0 2px 7px rgba(0, 0, 0, 0.04);
+    }
+
+    .panel-header {
+        padding: 13px 15px 7px;
+    }
+
+    .panel-title {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 700;
+    }
+
+    .panel-subtitle {
+        margin: 2px 0 0;
+        color: #6c757d;
+        font-size: 11px;
+    }
+
+    .panel-body {
+        padding: 10px 15px 15px;
+    }
+
+
+    /* =====================================================
+       GRAPH
+    ===================================================== */
+
+    .graph-box {
+        height: 275px;
+        position: relative;
+    }
+
+    .small-graph-box {
+        height: 255px;
+        position: relative;
+    }
+
+
+    /* =====================================================
+       PERIOD BUTTONS
+    ===================================================== */
+
+    .period-buttons {
+        display: flex;
+        gap: 5px;
+        margin-bottom: 9px;
+    }
+
+    .period-btn {
+        border: 1px solid #dee2e6;
+        background: #fff;
+        color: #6c757d;
+        border-radius: 5px;
+        padding: 5px 10px;
+        font-size: 11px;
+        cursor: pointer;
+    }
+
+    .period-btn.active {
+        background: #0d6efd;
+        border-color: #0d6efd;
+        color: #fff;
+    }
+
+
+    /* =====================================================
+       CATEGORY CARDS
+    ===================================================== */
+
+    .category-card {
+        height: 100%;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        background: #fff;
+        padding: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .category-image {
+        width: 58px;
+        height: 58px;
+        border-radius: 7px;
+        object-fit: cover;
+        border: 1px solid #e9ecef;
+        flex-shrink: 0;
+    }
+
+    .category-placeholder {
+        width: 58px;
+        height: 58px;
+        border-radius: 7px;
+        background: #f1f3f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #adb5bd;
+        font-size: 22px;
+        flex-shrink: 0;
+    }
+
+    .category-name {
+        font-size: 13px;
+        font-weight: 700;
+        margin-bottom: 3px;
+    }
+
+    .category-revenue {
+        font-size: 15px;
+        font-weight: 700;
+    }
+
+    .category-items {
+        color: #6c757d;
+        font-size: 10px;
+        margin-top: 2px;
+    }
+
+
+    /* =====================================================
+       SUBCATEGORY TABLE
+    ===================================================== */
+
+    .compact-table {
+        width: 100%;
+        margin: 0;
+        border-collapse: collapse;
+        font-size: 12px;
+    }
+
+    .compact-table th {
+        background: #f8f9fa;
+        color: #6c757d;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 9px 10px;
+        border-bottom: 1px solid #dee2e6;
+        white-space: nowrap;
+    }
+
+    .compact-table td {
+        padding: 6px 8px;
+        border-bottom: 1px solid #edf0f2;
+        vertical-align: middle;
+    }
+
+    .compact-table tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .subcategory-image {
+        width: 42px;
+        height: 42px;
+        object-fit: cover;
+        border-radius: 6px;
+        border: 1px solid #e9ecef;
+    }
+
+    .subcategory-placeholder {
+        width: 42px;
+        height: 42px;
+        border-radius: 6px;
+        background: #f1f3f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #adb5bd;
+    }
+
+.most-sold {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 90px;
+}
+.product-image {
+    width: 90px;
+    height: 90px;
+    border-radius: 0;
+    object-fit: contain;
+    border: none;
+    display: block;
+    background: transparent;
+}
+
+    .product-placeholder {
+        width: 36px;
+        height: 36px;
+        border-radius: 5px;
+        background: #f1f3f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #adb5bd;
+    }
+
+    .sub-name {
+        font-weight: 600;
+    }
+
+    .category-parent {
+        color: #6c757d;
+        font-size: 11px;
+    }
+
+    .money {
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+
+    /* =====================================================
+       EMPTY STATE
+    ===================================================== */
+
+    .empty-state {
+        padding: 35px 15px;
+        text-align: center;
+        color: #6c757d;
+        font-size: 13px;
+    }
+
+
+    /* =====================================================
+       MOBILE
+    ===================================================== */
+
+    @media (max-width: 768px) {
+
+        .revenue-page {
+            padding: 14px;
+        }
+
+        .revenue-tabs {
+            overflow-x: auto;
+        }
+
+        .revenue-tab {
+            padding: 8px 11px;
+        }
+
+        .graph-box {
+            height: 230px;
+        }
+
+        .small-graph-box {
+            height: 220px;
+        }
+
+    }
+
+</style>
+
+
+<div class="revenue-page">
+
+    <!-- =====================================================
+         HEADER
+    ===================================================== -->
+
+    <div class="revenue-header">
+
+        <h2>
+            Revenue
+        </h2>
+
+        <p>
+            Revenue analysis based on delivered orders.
+        </p>
+
+    </div>
+
+
+    <!-- =====================================================
+         REVENUE SECTION TABS
+    ===================================================== -->
+
+    <div class="revenue-tabs">
+
+        <a
+            href="{{ url_for('admin.revenue', section='overview') }}"
+            class="revenue-tab {% if section == 'overview' %}active{% endif %}"
+        >
+            📊 Overview
+        </a>
+
+        <a
+            href="{{ url_for('admin.revenue', section='category') }}"
+            class="revenue-tab {% if section == 'category' %}active{% endif %}"
+        >
+            📁 By Category
+        </a>
+
+        <a
+            href="{{ url_for('admin.revenue', section='subcategory') }}"
+            class="revenue-tab {% if section == 'subcategory' %}active{% endif %}"
+        >
+            📂 By Subcategory
+        </a>
+
+    </div>
+
+
+    <!-- =====================================================
+         OVERVIEW SECTION
+    ===================================================== -->
+
+    {% if section == "overview" %}
+
+        <!-- SUMMARY -->
+
+        <div class="row g-3 mb-3">
+
+            <div class="col-6 col-xl-3">
+
+                <div class="summary-card">
+
+                    <div class="summary-label">
+                        Total Revenue
+                    </div>
+
+                    <div class="summary-value">
+                        ₹{{ "%.2f"|format(total_revenue) }}
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="col-6 col-xl-3">
+
+                <div class="summary-card">
+
+                    <div class="summary-label">
+                        Today's Revenue
+                    </div>
+
+                    <div class="summary-value">
+                        ₹{{ "%.2f"|format(today_revenue) }}
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="col-6 col-xl-3">
+
+                <div class="summary-card">
+
+                    <div class="summary-label">
+                        This Month
+                    </div>
+
+                    <div class="summary-value">
+                        ₹{{ "%.2f"|format(monthly_revenue_value) }}
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="col-6 col-xl-3">
+
+                <div class="summary-card">
+
+                    <div class="summary-label">
+                        This Quarter
+                    </div>
+
+                    <div class="summary-value">
+                        ₹{{ "%.2f"|format(quarter_revenue) }}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- REVENUE GRAPH -->
+
+        <div class="revenue-panel">
+
+            <div class="panel-header">
+
+                <div class="d-flex justify-content-between align-items-center">
+
+                    <div>
+
+                        <div class="panel-title">
+                            Revenue Trend
+                        </div>
+
+                        <div class="panel-subtitle">
+                            Delivered revenue over time
+                        </div>
+
+                    </div>
+
+                    <div class="period-buttons">
+
+                        <button
+                            type="button"
+                            class="period-btn active"
+                            data-period="daily"
+                            onclick="changeRevenuePeriod('daily')"
+                        >
+                            Daily
+                        </button>
+
+                        <button
+                            type="button"
+                            class="period-btn"
+                            data-period="monthly"
+                            onclick="changeRevenuePeriod('monthly')"
+                        >
+                            Monthly
+                        </button>
+
+                        <button
+                            type="button"
+                            class="period-btn"
+                            data-period="quarterly"
+                            onclick="changeRevenuePeriod('quarterly')"
+                        >
+                            Quarterly
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="panel-body">
+
+                <div class="graph-box">
+
+                    <canvas id="overviewRevenueChart"></canvas>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         CATEGORY SECTION
+    ===================================================== -->
+
+    {% if section == "category" %}
+
+        <div class="row g-3">
+
+            <!-- CATEGORY LIST -->
+
+            <div class="col-lg-7">
+
+                <div class="revenue-panel">
+
+                    <div class="panel-header">
+
+                        <div class="panel-title">
+                            Revenue by Category
+                        </div>
+
+                        <div class="panel-subtitle">
+                            Categories ranked by delivered revenue
+                        </div>
+
+                    </div>
+
+                    <div class="panel-body">
+
+                        {% if category_revenue %}
+
+                            <div class="row g-2">
+
+                                {% for category in category_revenue %}
+
+                                    <div class="col-md-6">
+
+                                        <div class="category-card">
+
+                                            {% if category.image_url %}
+
+                                                <img
+                                                    src="{{ category.image_url }}"
+                                                    alt="{{ category.name }}"
+                                                    class="category-image"
+                                                >
+
+                                            {% else %}
+
+                                                <div class="category-placeholder">
+                                                    🖼
+                                                </div>
+
+                                            {% endif %}
+
+
+                                            <div class="flex-grow-1">
+
+                                                <div class="category-name">
+                                                    {{ category.name }}
+                                                </div>
+
+                                                <div class="category-revenue">
+                                                    ₹{{ "%.2f"|format(
+                                                        category.revenue
+                                                    ) }}
+                                                </div>
+
+                                                <div class="category-items">
+                                                    {{ category["items"] }} items sold
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                {% endfor %}
+
+                            </div>
+
+                        {% else %}
+
+                            <div class="empty-state">
+                                No delivered revenue available for categories.
+                            </div>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- CATEGORY GRAPH -->
+
+            <div class="col-lg-5">
+
+                <div class="revenue-panel">
+
+                    <div class="panel-header">
+
+                        <div class="panel-title">
+                            Category Revenue Graph
+                        </div>
+
+                        <div class="panel-subtitle">
+                            Revenue comparison
+                        </div>
+
+                    </div>
+
+                    <div class="panel-body">
+
+                        <div class="small-graph-box">
+
+                            <canvas id="categoryRevenueChart"></canvas>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         SUBCATEGORY SECTION
+    ===================================================== -->
+
+    {% if section == "subcategory" %}
+
+        <div class="row g-3">
+
+            <!-- SUBCATEGORY TABLE -->
+
+            <div class="col-lg-8">
+
+                <div class="revenue-panel">
+
+                    <div class="panel-header">
+
+                        <div class="panel-title">
+                            Revenue by Subcategory
+                        </div>
+
+                        <div class="panel-subtitle">
+                            All subcategories ranked by revenue
+                        </div>
+
+                    </div>
+
+
+                    {% if subcategory_revenue %}
+
+                        <div class="table-responsive">
+
+                            <table class="compact-table">
+
+                                <thead>
+
+                                    <tr>
+
+                                        <th>
+                                            Image
+                                        </th>
+
+                                        <th>
+                                            Subcategory
+                                        </th>
+
+                                        <th>
+                                            Category
+                                        </th>
+
+                                        <th>
+                                            Revenue
+                                        </th>
+
+                                        <th>
+                                            Items
+                                        </th>
+
+                                        <th>
+                                            Most Sold Product
+                                        </th>
+
+                                    </tr>
+
+                                </thead>
+
+
+                                <tbody>
+
+                                    {% for subcategory in subcategory_revenue %}
+
+                                        <tr>
+
+                                            <!-- IMAGE -->
+
+                                            <td>
+
+                                                {% if subcategory.image_url %}
+
+                                                    <img
+                                                        src="{{ subcategory.image_url }}"
+                                                        alt="{{ subcategory.name }}"
+                                                        class="subcategory-image"
+                                                    >
+
+                                                {% else %}
+
+                                                    <div class="subcategory-placeholder">
+                                                        🖼
+                                                    </div>
+
+                                                {% endif %}
+
+                                            </td>
+
+
+                                            <!-- SUBCATEGORY -->
+
+                                            <td>
+
+                                                <div class="sub-name">
+                                                    {{ subcategory.name }}
+                                                </div>
+
+                                            </td>
+
+
+                                            <!-- CATEGORY -->
+
+                                            <td>
+
+                                                <div class="category-parent">
+                                                    {{ subcategory.category_name }}
+                                                </div>
+
+                                            </td>
+
+
+                                            <!-- REVENUE -->
+
+                                            <td class="money">
+
+                                                ₹{{ "%.2f"|format(
+                                                    subcategory.revenue
+                                                ) }}
+
+                                            </td>
+
+
+                                            <!-- ITEMS -->
+
+                                            <td>
+
+                                                {{ subcategory["items"] }}
+
+                                            </td>
+
+
+                                            <!-- MOST SOLD PRODUCT -->
+
+                                            <td>
+
+                                                {% if subcategory.most_sold_product %}
+
+                                                    <div class="most-sold">
+
+                                                        {% if subcategory.most_sold_product and subcategory.most_sold_product["image_url"] %}
+
+    <img
+        src="{{ subcategory.most_sold_product['image_url'] }}"
+        alt="{{ subcategory.most_sold_product['name'] }}"
+        class="product-image"
+        loading="eager"
+    >
+
+{% else %}
+
+                                                            <div class="product-placeholder">
+                                                                🛍
+                                                            </div>
+
+                                                        {% endif %}
+
+                                                        <div>
+
+                                                            <div class="sub-name">
+
+                                                                {{ subcategory.most_sold_product["name"] }}
+
+                                                            </div>
+
+                                                            <div class="category-parent">
+
+                                                                {{ subcategory.most_sold_product["quantity"] }}
+                                                                sold
+
+                                                            </div>
+
+                                                        </div>
+
+                                                    </div>
+
+                                                {% else %}
+
+                                                    <span class="text-muted">
+                                                        No sales
+                                                    </span>
+
+                                                {% endif %}
+
+                                            </td>
+
+                                        </tr>
+
+                                    {% endfor %}
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    {% else %}
+
+                        <div class="empty-state">
+
+                            No delivered revenue available for subcategories.
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+
+            <!-- SUBCATEGORY GRAPH -->
+
+            <div class="col-lg-4">
+
+                <div class="revenue-panel">
+
+                    <div class="panel-header">
+
+                        <div class="panel-title">
+                            Subcategory Revenue
+                        </div>
+
+                        <div class="panel-subtitle">
+                            Revenue comparison
+                        </div>
+
+                    </div>
+
+                    <div class="panel-body">
+
+                        <div class="small-graph-box">
+
+                            <canvas id="subcategoryRevenueChart"></canvas>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+
+<!-- =========================================================
+     CHART.JS
+========================================================= -->
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+
+    /* =====================================================
+       DATA FROM FLASK
+    ===================================================== */
+
+    const dailyRevenue =
+        {{ daily_revenue | tojson }};
+
+    const monthlyRevenue =
+        {{ monthly_revenue | tojson }};
+
+    const quarterlyRevenue =
+        {{ quarterly_revenue | tojson }};
+
+    const categoryRevenue =
+        {{ category_graph | tojson }};
+
+    const subcategoryRevenue =
+        {{ subcategory_graph | tojson }};
+
+
+    /* =====================================================
+       OVERVIEW GRAPH
+    ===================================================== */
+
+    let overviewChart = null;
+
+
+    function getOverviewData(period) {
+
+        if (period === "monthly") {
+
+            return {
+                labels: monthlyRevenue.map(
+                    item => item.label
+                ),
+
+                values: monthlyRevenue.map(
+                    item => item.revenue
+                ),
+
+                title: "Monthly Revenue"
+
+            };
+
+        }
+
+
+        if (period === "quarterly") {
+
+            return {
+                labels: quarterlyRevenue.map(
+                    item => item.label
+                ),
+
+                values: quarterlyRevenue.map(
+                    item => item.revenue
+                ),
+
+                title: "Quarterly Revenue"
+
+            };
+
+        }
+
+
+        return {
+            labels: dailyRevenue.map(
+                item => item.label
+            ),
+
+            values: dailyRevenue.map(
+                item => item.revenue
+            ),
+
+            title: "Daily Revenue"
+        };
+
+    }
+
+
+    function createOverviewChart(period) {
+
+        const data =
+            getOverviewData(period);
+
+        const canvas =
+            document.getElementById(
+                "overviewRevenueChart"
+            );
+
+        if (!canvas) {
+            return;
+        }
+
+
+        if (overviewChart) {
+
+            overviewChart.destroy();
+
+        }
+
+
+        overviewChart = new Chart(
+            canvas,
+            {
+
+                type: "line",
+
+                data: {
+
+                    labels: data.labels,
+
+                    datasets: [
+
+                        {
+
+                            label: data.title,
+
+                            data: data.values,
+
+                            tension: 0.3,
+
+                            fill: true,
+
+                            borderWidth: 2
+
+                        }
+
+                    ]
+
+                },
+
+                options: {
+
+                    responsive: true,
+
+                    maintainAspectRatio: false,
+
+                    interaction: {
+
+                        intersect: false,
+
+                        mode: "index"
+
+                    },
+
+                    plugins: {
+
+                        legend: {
+                            display: false
+                        }
+
+                    },
+
+                    scales: {
+
+                        y: {
+
+                            beginAtZero: true,
+
+                            ticks: {
+
+                                callback:
+                                    function(value) {
+
+                                        return "₹" +
+                                            value.toLocaleString(
+                                                "en-IN"
+                                            );
+
+                                    }
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
+            }
+        );
+
+    }
+
+
+    function changeRevenuePeriod(period) {
+
+        document
+            .querySelectorAll(".period-btn")
+            .forEach(
+                function(button) {
+
+                    button.classList.remove(
+                        "active"
+                    );
+
+                }
+            );
+
+
+        const selectedButton =
+            document.querySelector(
+                '.period-btn[data-period="' +
+                period +
+                '"]'
+            );
+
+
+        if (selectedButton) {
+
+            selectedButton.classList.add(
+                "active"
+            );
+
+        }
+
+
+        createOverviewChart(period);
+
+    }
+
+
+    /* =====================================================
+       CATEGORY GRAPH
+    ===================================================== */
+
+    function createCategoryChart() {
+
+        const canvas =
+            document.getElementById(
+                "categoryRevenueChart"
+            );
+
+        if (!canvas) {
+            return;
+        }
+
+
+        new Chart(
+            canvas,
+            {
+
+                type: "bar",
+
+                data: {
+
+                    labels: categoryRevenue.map(
+                        item => item.label
+                    ),
+
+                    datasets: [
+
+                        {
+
+                            label: "Revenue",
+
+                            data: categoryRevenue.map(
+                                item => item.revenue
+                            ),
+
+                            borderWidth: 1
+
+                        }
+
+                    ]
+
+                },
+
+                options: {
+
+                    responsive: true,
+
+                    maintainAspectRatio: false,
+
+                    plugins: {
+
+                        legend: {
+                            display: false
+                        }
+
+                    },
+
+                    scales: {
+
+                        y: {
+
+                            beginAtZero: true,
+
+                            ticks: {
+
+                                callback:
+                                    function(value) {
+
+                                        return "₹" +
+                                            value.toLocaleString(
+                                                "en-IN"
+                                            );
+
+                                    }
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
+            }
+        );
+
+    }
+
+
+    /* =====================================================
+       SUBCATEGORY GRAPH
+    ===================================================== */
+
+    function createSubcategoryChart() {
+
+        const canvas =
+            document.getElementById(
+                "subcategoryRevenueChart"
+            );
+
+        if (!canvas) {
+            return;
+        }
+
+
+        new Chart(
+            canvas,
+            {
+
+                type: "bar",
+
+                data: {
+
+                    labels: subcategoryRevenue.map(
+                        item => item.label
+                    ),
+
+                    datasets: [
+
+                        {
+
+                            label: "Revenue",
+
+                            data: subcategoryRevenue.map(
+                                item => item.revenue
+                            ),
+
+                            borderWidth: 1
+
+                        }
+
+                    ]
+
+                },
+
+                options: {
+
+                    indexAxis: "y",
+
+                    responsive: true,
+
+                    maintainAspectRatio: false,
+
+                    plugins: {
+
+                        legend: {
+                            display: false
+                        }
+
+                    },
+
+                    scales: {
+
+                        x: {
+
+                            beginAtZero: true,
+
+                            ticks: {
+
+                                callback:
+                                    function(value) {
+
+                                        return "₹" +
+                                            value.toLocaleString(
+                                                "en-IN"
+                                            );
+
+                                    }
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
+            }
+        );
+
+    }
+
+
+    /* =====================================================
+       INITIALIZE ONLY CURRENT SECTION
+    ===================================================== */
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        function() {
+
+            const currentSection =
+                "{{ section }}";
+
+
+            if (
+                currentSection ===
+                "overview"
+            ) {
+
+                createOverviewChart(
+                    "daily"
+                );
+
+            }
+
+
+            if (
+                currentSection ===
+                "category"
+            ) {
+
+                createCategoryChart();
+
+            }
+
+
+            if (
+                currentSection ===
+                "subcategory"
+            ) {
+
+                createSubcategoryChart();
+
+            }
+
+        }
+    );
+
+</script>
+
+{% endblock %}

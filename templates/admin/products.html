@@ -6,18 +6,354 @@ Products | ShopEase Admin
 
 {% block content %}
 
-<div class="container py-5">
+<style>
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    /* =====================================================
+       PRODUCTS PAGE
+    ===================================================== */
+
+    .products-page {
+        width: 94%;
+        margin: 0 auto;
+        padding: 28px 0 35px;
+    }
+
+    .products-header {
+        margin-bottom: 18px;
+    }
+
+    .products-header h2 {
+        font-size: 25px;
+        font-weight: 700;
+        margin-bottom: 3px;
+    }
+
+    .products-header p {
+        font-size: 13px;
+        margin: 0;
+        color: #6c757d;
+    }
+
+
+    /* =====================================================
+       SEARCH + FILTER BAR
+    ===================================================== */
+
+    .product-filter-box {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 9px;
+        padding: 12px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 7px rgba(0, 0, 0, 0.04);
+    }
+
+    .product-search {
+        height: 39px;
+        font-size: 13px;
+    }
+
+    .product-filter {
+        height: 39px;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    .clear-filter-btn {
+        height: 39px;
+        white-space: nowrap;
+        font-size: 12px;
+    }
+
+
+    /* =====================================================
+       PRODUCT TABLE
+    ===================================================== */
+
+    .products-table-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 9px;
+        overflow: hidden;
+        box-shadow: 0 2px 7px rgba(0, 0, 0, 0.04);
+    }
+
+    .products-table-wrapper {
+        overflow-x: auto;
+    }
+
+    .products-table {
+        width: 100%;
+        margin: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 12px;
+    }
+
+    .products-table thead th {
+        background: #f8f9fa;
+        color: #495057;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 11px 9px;
+        border-bottom: 1px solid #dee2e6;
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+
+    .products-table tbody td {
+        padding: 8px 9px;
+        border-bottom: 1px solid #edf0f2;
+        vertical-align: middle;
+    }
+
+    .products-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .products-table tbody tr:hover {
+        background: #fafbfc;
+    }
+
+
+    /* =====================================================
+       COLUMN SIZING
+    ===================================================== */
+
+    .col-id {
+        width: 55px;
+    }
+
+    .col-product {
+        min-width: 250px;
+    }
+
+    .col-sku {
+        min-width: 110px;
+    }
+
+    .col-category {
+        min-width: 120px;
+    }
+
+    .col-brand {
+        min-width: 100px;
+    }
+
+    .col-price {
+        min-width: 90px;
+    }
+
+    .col-stock {
+        min-width: 90px;
+    }
+
+    .col-featured {
+        min-width: 90px;
+    }
+
+    .col-status {
+        min-width: 85px;
+    }
+
+    .col-created {
+        min-width: 105px;
+    }
+
+    .col-actions {
+        min-width: 90px;
+        width: 90px;
+    }
+
+
+    /* =====================================================
+       PRODUCT CELL
+    ===================================================== */
+
+    .product-cell {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        min-height: 66px;
+    }
+
+.product-image-box {
+    width: 90px;
+    height: 90px;
+    flex-shrink: 0;
+    overflow: hidden;
+    border-radius: 1px;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.product-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+    border: none;
+    display: block;
+}
+    .product-image-placeholder {
+        width: 58px;
+        height: 58px;
+        flex-shrink: 0;
+        border-radius: 7px;
+        background: #f1f3f5;
+        border: 1px solid #e9ecef;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #adb5bd;
+        font-size: 20px;
+    }
+
+    .product-info {
+        min-width: 0;
+    }
+
+    .product-name {
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.35;
+        max-width: 210px;
+    }
+
+    .product-subcategory {
+        font-size: 11px;
+        color: #6c757d;
+        margin-top: 3px;
+    }
+
+
+    /* =====================================================
+       OTHER CELLS
+    ===================================================== */
+
+    .sku-code {
+        font-size: 11px;
+        white-space: nowrap;
+    }
+
+    .price-value {
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .stock-value {
+        white-space: nowrap;
+    }
+
+    .created-date {
+        white-space: nowrap;
+        color: #495057;
+    }
+
+
+    /* =====================================================
+       ACTIONS
+    ===================================================== */
+
+    .actions-cell {
+        width: 90px;
+        min-width: 90px;
+        white-space: nowrap;
+        text-align: center;
+    }
+
+    .product-actions {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+        width: 72px;
+        margin: 0 auto;
+    }
+
+    .product-actions .btn {
+        width: 72px;
+        font-size: 11px;
+        line-height: 1.25;
+        padding: 4px 5px;
+    }
+
+    .product-actions form {
+        margin: 0;
+        padding: 0;
+    }
+
+
+    /* =====================================================
+       BADGES
+    ===================================================== */
+
+    .product-badge {
+        font-size: 10px;
+        font-weight: 600;
+        padding: 4px 7px;
+        white-space: nowrap;
+    }
+
+
+    /* =====================================================
+       EMPTY STATE
+    ===================================================== */
+
+    .empty-products {
+        text-align: center;
+        padding: 50px 20px;
+    }
+
+    .empty-products h5 {
+        font-size: 16px;
+        margin-bottom: 6px;
+    }
+
+    .empty-products p {
+        font-size: 13px;
+    }
+
+
+    /* =====================================================
+       RESPONSIVE
+    ===================================================== */
+
+    @media (max-width: 900px) {
+
+        .products-page {
+            width: 96%;
+        }
+
+        .product-search-column {
+            margin-bottom: 8px;
+        }
+
+    }
+
+</style>
+
+
+<div class="products-page">
+
+    <!-- =====================================================
+         HEADER
+    ===================================================== -->
+
+    <div class="products-header d-flex justify-content-between align-items-center">
 
         <div>
-            <h2 class="fw-bold mb-1">
+
+            <h2>
                 Products
             </h2>
 
-            <p class="text-muted mb-0">
+            <p>
                 Manage your store products.
             </p>
+
         </div>
 
         <a
@@ -30,7 +366,9 @@ Products | ShopEase Admin
     </div>
 
 
-    <!-- Flash Messages -->
+    <!-- =====================================================
+         FLASH MESSAGES
+    ===================================================== -->
 
     {% with messages = get_flashed_messages(with_categories=true) %}
 
@@ -49,37 +387,187 @@ Products | ShopEase Admin
     {% endwith %}
 
 
-    <div class="card border-0 shadow-sm">
+    <!-- =====================================================
+         SEARCH + FILTERS
+    ===================================================== -->
 
-        <div class="table-responsive">
+    <div class="product-filter-box">
 
-            <table class="table table-hover align-middle mb-0">
+        <div class="row g-2 align-items-center">
 
-                <thead class="table-light">
+            <!-- SEARCH -->
+
+            <div class="col-lg-5 col-md-12 product-search-column">
+
+                <input
+                    type="text"
+                    id="productSearch"
+                    class="form-control product-search"
+                    placeholder="Search by ID, product name, SKU or brand..."
+                    autocomplete="off"
+                >
+
+            </div>
+
+
+            <!-- CATEGORY -->
+
+            <div class="col-lg-2 col-md-4">
+
+                <select
+                    id="categoryFilter"
+                    class="form-select product-filter"
+                >
+
+                    <option value="">
+                        All Categories
+                    </option>
+
+                    {% for category in categories %}
+
+                        <option value="{{ category.id }}">
+                            {{ category.name }}
+                        </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </div>
+
+
+            <!-- SUBCATEGORY -->
+
+            <div class="col-lg-2 col-md-4">
+
+                <select
+                    id="subcategoryFilter"
+                    class="form-select product-filter"
+                >
+
+                    <option value="">
+                        All Subcategories
+                    </option>
+
+                    {% for subcategory in subcategories %}
+
+                        <option
+                            value="{{ subcategory.id }}"
+                            data-category="{{ subcategory.category_id }}"
+                        >
+                            {{ subcategory.name }}
+                        </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </div>
+
+
+            <!-- BRAND -->
+
+            <div class="col-lg-2 col-md-4">
+
+                <select
+                    id="brandFilter"
+                    class="form-select product-filter"
+                >
+
+                    <option value="">
+                        All Brands
+                    </option>
+
+                    {% for brand in brands %}
+
+                        <option value="{{ brand.id }}">
+                            {{ brand.name }}
+                        </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </div>
+
+
+            <!-- CLEAR -->
+
+            <div class="col-lg-1 col-md-12">
+
+                <button
+                    type="button"
+                    id="clearFilters"
+                    class="btn btn-outline-secondary clear-filter-btn w-100"
+                >
+                    Clear
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         PRODUCTS TABLE
+    ===================================================== -->
+
+    <div class="products-table-card">
+
+        <div class="products-table-wrapper">
+
+            <table
+                class="products-table table-hover"
+                id="productsTable"
+            >
+
+                <thead>
 
                     <tr>
 
-                        <th>ID</th>
+                        <th class="col-id">
+                            ID
+                        </th>
 
-                        <th>Product</th>
+                        <th class="col-product">
+                            Product
+                        </th>
 
-                        <th>SKU</th>
+                        <th class="col-sku">
+                            SKU
+                        </th>
 
-                        <th>Category</th>
+                        <th class="col-category">
+                            Category
+                        </th>
 
-                        <th>Brand</th>
+                        <th class="col-brand">
+                            Brand
+                        </th>
 
-                        <th>Price</th>
+                        <th class="col-price">
+                            Price
+                        </th>
 
-                        <th>Stock</th>
+                        <th class="col-stock">
+                            Stock
+                        </th>
 
-                        <th>Featured</th>
+                        <th class="col-featured">
+                            Featured
+                        </th>
 
-                        <th>Status</th>
+                        <th class="col-status">
+                            Status
+                        </th>
 
-                        <th>Created</th>
+                        <th class="col-created">
+                            Created
+                        </th>
 
-                        <th class="text-end">
+                        <th class="col-actions text-center">
                             Actions
                         </th>
 
@@ -88,42 +576,151 @@ Products | ShopEase Admin
                 </thead>
 
 
-                <tbody>
+                <tbody id="productsTableBody">
 
                     {% if products %}
 
                         {% for product in products %}
 
-                            <tr>
+                            <tr
+                                class="product-row"
+
+                                data-product-id="{{ product.id }}"
+
+                                data-product-name="{{ product.name|lower }}"
+
+                                data-product-sku="{{ product.sku|lower }}"
+
+                                data-brand-id="{% if product.brand %}{{ product.brand.id }}{% endif %}"
+
+                                data-brand-name="{% if product.brand %}{{ product.brand.name|lower }}{% endif %}"
+
+                                data-category-id="{% if product.category %}{{ product.category.id }}{% endif %}"
+
+                                data-subcategory-id="{% if product.subcategory %}{{ product.subcategory.id }}{% endif %}"
+
+                            >
+
+                                <!-- =================================================
+                                     ID
+                                ================================================== -->
 
                                 <td>
+
                                     {{ product.id }}
+
                                 </td>
 
+
+                                <!-- =================================================
+                                     PRODUCT + IMAGE
+                                ================================================== -->
+
                                 <td>
-                                    <strong>
-                                        {{ product.name }}
-                                    </strong>
 
-                                    {% if product.subcategory %}
+                                    <div class="product-cell">
 
-                                        <div class="small text-muted">
-                                            {{ product.subcategory.name }}
+                                        {% set primary_image = product.images
+                                            |selectattr("is_primary", "equalto", true)
+                                            |first
+                                        %}
+
+                                        {% if not primary_image and product.images %}
+
+                                            {% set primary_image = product.images[0] %}
+
+                                        {% endif %}
+
+
+                                        {% if primary_image %}
+
+                                            <div class="product-image-box">
+
+    <img
+        src="{{ url_for(
+            'admin.product_image_view',
+            product_id=product.id,
+            image_id=primary_image.id
+        ) }}"
+        alt="{{ product.name }}"
+        class="product-image"
+        loading="lazy"
+    >
+
+</div>
+
+                                        {% else %}
+
+                                            <div class="product-image-placeholder">
+                                                🖼
+                                            </div>
+
+                                        {% endif %}
+
+
+                                        <div class="product-info">
+
+                                            <div class="product-name">
+
+                                                {{ product.name }}
+
+                                            </div>
+
+
+                                            {% if product.subcategory %}
+
+                                                <div class="product-subcategory">
+
+                                                    {{ product.subcategory.name }}
+
+                                                </div>
+
+                                            {% endif %}
+
                                         </div>
+
+                                    </div>
+
+                                </td>
+
+
+                                <!-- =================================================
+                                     SKU
+                                ================================================== -->
+
+                                <td>
+
+                                    <code class="sku-code">
+                                        {{ product.sku }}
+                                    </code>
+
+                                </td>
+
+
+                                <!-- =================================================
+                                     CATEGORY
+                                ================================================== -->
+
+                                <td>
+
+                                    {% if product.category %}
+
+                                        {{ product.category.name }}
+
+                                    {% else %}
+
+                                        <span class="text-muted">
+                                            —
+                                        </span>
 
                                     {% endif %}
 
                                 </td>
 
-                                <td>
-                                    <code>
-                                        {{ product.sku }}
-                                    </code>
-                                </td>
 
-                                <td>
-                                    {{ product.category.name }}
-                                </td>
+                                <!-- =================================================
+                                     BRAND
+                                ================================================== -->
 
                                 <td>
 
@@ -141,34 +738,61 @@ Products | ShopEase Admin
 
                                 </td>
 
+
+                                <!-- =================================================
+                                     PRICE
+                                ================================================== -->
+
                                 <td>
-                                    ₹{{ "%.2f"|format(product.price) }}
+
+                                    <span class="price-value">
+
+                                        ₹{{ "%.2f"|format(product.price) }}
+
+                                    </span>
+
                                 </td>
+
+
+                                <!-- =================================================
+                                     STOCK
+                                ================================================== -->
 
                                 <td>
 
                                     {% if product.stock_quantity > 0 %}
 
-                                        <span class="badge bg-success">
+                                        <span class="badge bg-success product-badge">
+
                                             {{ product.stock_quantity }}
+
                                         </span>
 
                                     {% else %}
 
-                                        <span class="badge bg-danger">
+                                        <span class="badge bg-danger product-badge">
+
                                             Out of Stock
+
                                         </span>
 
                                     {% endif %}
 
                                 </td>
 
+
+                                <!-- =================================================
+                                     FEATURED
+                                ================================================== -->
+
                                 <td>
 
                                     {% if product.featured %}
 
-                                        <span class="badge bg-warning text-dark">
+                                        <span class="badge bg-warning text-dark product-badge">
+
                                             Featured
+
                                         </span>
 
                                     {% else %}
@@ -181,82 +805,141 @@ Products | ShopEase Admin
 
                                 </td>
 
+
+                                <!-- =================================================
+                                     STATUS
+                                ================================================== -->
+
                                 <td>
 
                                     {% if product.is_active %}
 
-                                        <span class="badge bg-success">
+                                        <span class="badge bg-success product-badge">
+
                                             Active
+
                                         </span>
 
                                     {% else %}
 
-                                        <span class="badge bg-secondary">
+                                        <span class="badge bg-secondary product-badge">
+
                                             Inactive
+
                                         </span>
 
                                     {% endif %}
 
                                 </td>
 
+
+                                <!-- =================================================
+                                     CREATED
+                                ================================================== -->
+
                                 <td>
-                                    {{ product.created_at.strftime('%d %b %Y') }}
+
+                                    <span class="created-date">
+
+                                        {{ product.created_at.strftime(
+                                            '%d %b %Y'
+                                        ) }}
+
+                                    </span>
+
                                 </td>
 
-                                <td class="text-end">
 
-    <a
-        href="{{ url_for(
-            'admin.edit_product',
-            product_id=product.id
-        ) }}"
-        class="btn btn-sm btn-outline-primary"
-    >
-        Edit
-    </a>
+                                <!-- =================================================
+                                     ACTIONS
+                                ================================================== -->
 
-    <a
-        href="{{ url_for(
-            'admin.product_images',
-            product_id=product.id
-        ) }}"
-        class="btn btn-sm btn-outline-primary"
-    >
-        Images
-    </a>
+                                <td class="actions-cell">
 
-    <form
-        method="POST"
-        action="{{ url_for(
-            'admin.delete_product',
-            product_id=product.id
-        ) }}"
-        class="d-inline"
-        onsubmit="return confirm(
-            'Are you sure you want to permanently delete this product?'
-        );"
-    >
+                                    <div class="product-actions">
 
-        <input
-            type="hidden"
-            name="csrf_token"
-            value="{{ csrf_token() }}"
-        >
+                                        <a
+                                            href="{{ url_for(
+                                                'admin.edit_product',
+                                                product_id=product.id
+                                            ) }}"
+                                            class="btn btn-sm btn-outline-primary"
+                                        >
+                                            Edit
+                                        </a>
 
-        <button
-            type="submit"
-            class="btn btn-sm btn-outline-danger"
-        >
-            Delete
-        </button>
 
-    </form>
+                                        <a
+                                            href="{{ url_for(
+                                                'admin.product_images',
+                                                product_id=product.id
+                                            ) }}"
+                                            class="btn btn-sm btn-outline-primary"
+                                        >
+                                            Images
+                                        </a>
 
-</td>
+
+                                        <form
+                                            method="POST"
+                                            action="{{ url_for(
+                                                'admin.delete_product',
+                                                product_id=product.id
+                                            ) }}"
+                                            onsubmit="return confirm(
+                                                'Are you sure you want to permanently delete this product?'
+                                            );"
+                                        >
+
+                                            <input
+                                                type="hidden"
+                                                name="csrf_token"
+                                                value="{{ csrf_token() }}"
+                                            >
+
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm btn-outline-danger"
+                                            >
+                                                Delete
+                                            </button>
+
+                                        </form>
+
+                                    </div>
+
+                                </td>
 
                             </tr>
 
                         {% endfor %}
+
+
+                        <!-- =================================================
+                             NO SEARCH RESULTS
+                        ================================================== -->
+
+                        <tr id="noSearchResults" style="display: none;">
+
+                            <td
+                                colspan="11"
+                                class="text-center py-5"
+                            >
+
+                                <h5>
+                                    No matching products
+                                </h5>
+
+                                <p class="text-muted mb-0">
+
+                                    Try a different search or filter.
+
+                                </p>
+
+                            </td>
+
+                        </tr>
+
 
                     {% else %}
 
@@ -264,7 +947,7 @@ Products | ShopEase Admin
 
                             <td
                                 colspan="11"
-                                class="text-center py-5"
+                                class="empty-products"
                             >
 
                                 <h5>
@@ -297,5 +980,319 @@ Products | ShopEase Admin
     </div>
 
 </div>
+
+
+<!-- =========================================================
+     LIVE SEARCH + FILTERING
+========================================================= -->
+
+<script>
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        function () {
+
+            const searchInput =
+                document.getElementById(
+                    "productSearch"
+                );
+
+            const categoryFilter =
+                document.getElementById(
+                    "categoryFilter"
+                );
+
+            const subcategoryFilter =
+                document.getElementById(
+                    "subcategoryFilter"
+                );
+
+            const brandFilter =
+                document.getElementById(
+                    "brandFilter"
+                );
+
+            const clearButton =
+                document.getElementById(
+                    "clearFilters"
+                );
+
+            const rows =
+                Array.from(
+                    document.querySelectorAll(
+                        ".product-row"
+                    )
+                );
+
+            const noResults =
+                document.getElementById(
+                    "noSearchResults"
+                );
+
+
+            /* =================================================
+               FILTER PRODUCTS
+            ================================================= */
+
+            function filterProducts() {
+
+                const search =
+                    searchInput.value
+                        .trim()
+                        .toLowerCase();
+
+                const selectedCategory =
+                    categoryFilter.value;
+
+                const selectedSubcategory =
+                    subcategoryFilter.value;
+
+                const selectedBrand =
+                    brandFilter.value;
+
+
+                let visibleCount = 0;
+
+
+                rows.forEach(
+                    function (row) {
+
+                        const productId =
+                            row.dataset.productId
+                                .toLowerCase();
+
+                        const productName =
+                            row.dataset.productName || "";
+
+                        const productSku =
+                            row.dataset.productSku || "";
+
+                        const brandName =
+                            row.dataset.brandName || "";
+
+                        const categoryId =
+                            row.dataset.categoryId || "";
+
+                        const subcategoryId =
+                            row.dataset.subcategoryId || "";
+
+                        const brandId =
+                            row.dataset.brandId || "";
+
+
+                        /* =====================================
+                           LIVE SEARCH
+                        ===================================== */
+
+                        const matchesSearch =
+                            !search ||
+
+                            productId.includes(
+                                search
+                            ) ||
+
+                            productName.includes(
+                                search
+                            ) ||
+
+                            productSku.includes(
+                                search
+                            ) ||
+
+                            brandName.includes(
+                                search
+                            );
+
+
+                        /* =====================================
+                           CATEGORY
+                        ===================================== */
+
+                        const matchesCategory =
+                            !selectedCategory ||
+                            categoryId ===
+                            selectedCategory;
+
+
+                        /* =====================================
+                           SUBCATEGORY
+                        ===================================== */
+
+                        const matchesSubcategory =
+                            !selectedSubcategory ||
+                            subcategoryId ===
+                            selectedSubcategory;
+
+
+                        /* =====================================
+                           BRAND
+                        ===================================== */
+
+                        const matchesBrand =
+                            !selectedBrand ||
+                            brandId ===
+                            selectedBrand;
+
+
+                        const visible =
+                            matchesSearch &&
+                            matchesCategory &&
+                            matchesSubcategory &&
+                            matchesBrand;
+
+
+                        row.style.display =
+                            visible
+                                ? ""
+                                : "none";
+
+
+                        if (visible) {
+
+                            visibleCount++;
+
+                        }
+
+                    }
+                );
+
+
+                if (noResults) {
+
+                    noResults.style.display =
+                        visibleCount === 0
+                            ? ""
+                            : "none";
+
+                }
+
+            }
+
+
+            /* =================================================
+               SUBCATEGORY OPTIONS
+               ================================================= */
+
+            function updateSubcategoryOptions() {
+
+                const selectedCategory =
+                    categoryFilter.value;
+
+
+                const options =
+                    Array.from(
+                        subcategoryFilter.options
+                    );
+
+
+                options.forEach(
+                    function (option, index) {
+
+                        if (index === 0) {
+                            return;
+                        }
+
+
+                        const optionCategory =
+                            option.dataset.category;
+
+
+                        if (
+                            !selectedCategory ||
+                            optionCategory ===
+                            selectedCategory
+                        ) {
+
+                            option.hidden =
+                                false;
+
+                        } else {
+
+                            option.hidden =
+                                true;
+
+                            if (
+                                subcategoryFilter.value ===
+                                option.value
+                            ) {
+
+                                subcategoryFilter.value =
+                                    "";
+
+                            }
+
+                        }
+
+                    }
+                );
+
+            }
+
+
+            /* =================================================
+               EVENTS
+            ================================================= */
+
+            searchInput.addEventListener(
+                "input",
+                filterProducts
+            );
+
+
+            categoryFilter.addEventListener(
+                "change",
+                function () {
+
+                    updateSubcategoryOptions();
+                    filterProducts();
+
+                }
+            );
+
+
+            subcategoryFilter.addEventListener(
+                "change",
+                filterProducts
+            );
+
+
+            brandFilter.addEventListener(
+                "change",
+                filterProducts
+            );
+
+
+            clearButton.addEventListener(
+                "click",
+                function () {
+
+                    searchInput.value = "";
+
+                    categoryFilter.value = "";
+
+                    subcategoryFilter.value = "";
+
+                    brandFilter.value = "";
+
+                    updateSubcategoryOptions();
+
+                    filterProducts();
+
+                }
+            );
+
+
+            /* =================================================
+               INITIALIZE
+            ================================================= */
+
+            updateSubcategoryOptions();
+
+            filterProducts();
+
+        }
+    );
+
+</script>
 
 {% endblock %}

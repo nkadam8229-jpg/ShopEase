@@ -672,6 +672,72 @@ class CartItem(db.Model):
             f"variant={self.product_size_id}>"
         )
 
+
+# =========================================================
+# WISHLIST ITEM
+# =========================================================
+
+class WishlistItem(db.Model):
+
+    __tablename__ = "wishlist"
+
+    id = db.Column(
+        db.BigInteger,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    user_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("users.id"),
+        nullable=False,
+        index=True
+    )
+
+    product_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("products.id"),
+        nullable=False,
+        index=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp()
+    )
+
+    user = db.relationship(
+        "User",
+        backref=db.backref(
+            "wishlist_items",
+            lazy=True
+        )
+    )
+
+    product = db.relationship(
+        "Product",
+        backref=db.backref(
+            "wishlist_items",
+            lazy=True
+        )
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "user_id",
+            "product_id",
+            name="uq_wishlist_user_product"
+        ),
+    )
+
+    def __repr__(self):
+
+        return (
+            f"<WishlistItem "
+            f"user={self.user_id} "
+            f"product={self.product_id}>"
+        )
 # =========================================================
 # ADDRESS
 # =========================================================

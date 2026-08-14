@@ -25,7 +25,8 @@ from app.models import (
     Address,
     Order,
     OrderItem,
-    User
+    User,
+    WishlistItem
 )
 from werkzeug.security import (
     check_password_hash,
@@ -34,6 +35,7 @@ from werkzeug.security import (
 
 from decimal import Decimal
 from datetime import datetime
+from difflib import SequenceMatcher
 import secrets
 from app.services.storage_service import StorageService
 
@@ -324,6 +326,13 @@ def products():
     # =====================================================
     # READ FILTERS
     # =====================================================
+
+    search_text = (
+    request.args.get(
+        "search",
+        ""
+    ).strip()
+    )
 
     category_slug = (
         request.args.get(
@@ -698,6 +707,169 @@ def products():
     # =====================================================
 
     product_query = base_query
+    # =====================================================
+    # SEARCH
+
+    search_scores = {}
+
+    if search_text:
+
+        search_words = [
+            word.lower()
+            for word in search_text.split()
+            if word.strip()
+        ]
+
+
+    # -------------------------------------------------
+    # GET PRODUCTS AVAILABLE IN CURRENT
+    # CATEGORY / SUBCATEGORY
+    # -------------------------------------------------
+
+    search_candidates = (
+        base_query
+        .all()
+    )
+
+
+    matching_product_ids = []
+
+
+    for product in search_candidates:
+
+        searchable_values = [
+
+            product.name or "",
+
+            (
+                product.brand.name
+                if product.brand
+                else ""
+            ),
+
+            (
+                product.category.name
+                if product.category
+                else ""
+            ),
+
+            (
+                product.subcategory.name
+                if product.subcategory
+                else ""
+            )
+        ]
+
+
+        searchable_text = " ".join(
+            searchable_values
+        ).lower()
+
+
+        # -------------------------------------------------
+        # DIRECT MATCH
+        # -------------------------------------------------
+
+        if search_text.lower() in searchable_text:
+
+            matching_product_ids.append(
+                product.id
+            )
+
+            search_scores[product.id] = 100
+
+            continue
+
+
+        # -------------------------------------------------
+        # WORD / FUZZY MATCH
+        # -------------------------------------------------
+
+        best_score = 0
+
+
+        for search_word in search_words:
+
+            word_best_score = 0
+
+
+            for value in searchable_values:
+
+                value = value.lower().strip()
+
+                if not value:
+                    continue
+
+
+                # Exact word / partial word match
+
+                if search_word in value:
+
+                    word_best_score = 95
+
+                    break
+
+
+                # Compare against individual words
+
+                value_words = value.split()
+
+
+                for value_word in value_words:
+
+                    similarity = (
+                        SequenceMatcher(
+                            None,
+                            search_word,
+                            value_word
+                        ).ratio()
+                        * 100
+                    )
+
+
+                    if similarity > word_best_score:
+
+                        word_best_score = similarity
+
+
+            best_score = max(
+                best_score,
+                word_best_score
+            )
+
+
+        # -------------------------------------------------
+        # ACCEPT REASONABLE FUZZY MATCH
+        # -------------------------------------------------
+
+        if best_score >= 75:
+
+            matching_product_ids.append(
+                product.id
+            )
+
+            search_scores[product.id] = (
+                best_score
+            )
+
+
+    # -------------------------------------------------
+    # NO SEARCH RESULTS
+    # -------------------------------------------------
+
+    if matching_product_ids:
+
+        product_query = product_query.filter(
+            Product.id.in_(
+                matching_product_ids
+            )
+        )
+
+    else:
+
+        product_query = product_query.filter(
+            Product.id == -1
+        )
 
 
     # -----------------------------------------------------
@@ -803,6 +975,23 @@ def products():
         .all()
     )
 
+    # =====================================================
+    # SEARCH RELEVANCE
+    #
+    # When the customer is searching and has not selected
+    # another sorting method, show the closest matches first.
+    # =====================================================
+
+    if search_text and sort == "recommended":
+
+        products.sort(
+            key=lambda product: search_scores.get(
+                product.id,
+                0
+            ),
+            reverse=True
+        )
+
 
     # =====================================================
     # PRICE RANGE FOR CURRENT CATEGORY/SUBCATEGORY
@@ -838,6 +1027,7 @@ def products():
         "products.html",
         products=products,
         category=selected_category,
+        search_text=search_text,
         subcategories=subcategories,
         selected_subcategory=selected_subcategory,
         categories=categories,
@@ -1550,6 +1740,264 @@ def remove_cart_item(cart_item_id):
         url_for("main.cart")
     )
 
+
+# =========================================================
+# WISHLIST
+# =========================================================
+
+@main_bp.route("/wishlist")
+def wishlist():
+
+    # -----------------------------------------------------
+    # LOGIN REQUIRED
+    # -----------------------------------------------------
+
+    user_id = session.get("user_id")
+
+    if not user_id:
+
+        flash(
+            "Please login to view your wishlist.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("auth.login")
+        )
+
+
+    # -----------------------------------------------------
+    # GET WISHLIST ITEMS
+    # -----------------------------------------------------
+
+    wishlist_items = (
+        WishlistItem.query
+        .filter_by(
+            user_id=user_id
+        )
+        .join(Product)
+        .filter(
+            Product.is_active.is_(True)
+        )
+        .order_by(
+            WishlistItem.created_at.desc()
+        )
+        .all()
+    )
+
+
+    return render_template(
+        "wishlist.html",
+        wishlist_items=wishlist_items
+    )
+
+
+# =========================================================
+# ADD TO WISHLIST
+# =========================================================
+
+@main_bp.route(
+    "/wishlist/add",
+    methods=["POST"]
+)
+def add_to_wishlist():
+
+    # -----------------------------------------------------
+    # LOGIN REQUIRED
+    # -----------------------------------------------------
+
+    user_id = session.get("user_id")
+
+    if not user_id:
+
+        flash(
+            "Please login to add products to your wishlist.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("auth.login")
+        )
+
+
+    product_id = request.form.get(
+        "product_id",
+        type=int
+    )
+
+
+    if not product_id:
+
+        flash(
+            "Invalid product.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("main.products")
+        )
+
+
+    # -----------------------------------------------------
+    # PRODUCT
+    # -----------------------------------------------------
+
+    product = (
+        Product.query
+        .filter_by(
+            id=product_id,
+            is_active=True
+        )
+        .first()
+    )
+
+
+    if not product:
+
+        flash(
+            "Product is no longer available.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("main.products")
+        )
+
+
+    # -----------------------------------------------------
+    # CHECK EXISTING WISHLIST ITEM
+    # -----------------------------------------------------
+
+    existing_item = (
+        WishlistItem.query
+        .filter_by(
+            user_id=user_id,
+            product_id=product.id
+        )
+        .first()
+    )
+
+
+    if existing_item:
+
+        flash(
+            "Product is already in your wishlist.",
+            "info"
+        )
+
+        return redirect(
+            url_for(
+                "main.product_detail",
+                slug=product.slug
+            )
+        )
+
+
+    # -----------------------------------------------------
+    # ADD PRODUCT
+    # -----------------------------------------------------
+
+    wishlist_item = WishlistItem(
+        user_id=user_id,
+        product_id=product.id
+    )
+
+
+    db.session.add(
+        wishlist_item
+    )
+
+    db.session.commit()
+
+
+    flash(
+        "Product added to wishlist.",
+        "success"
+    )
+
+
+    return redirect(
+        url_for(
+            "main.product_detail",
+            slug=product.slug
+        )
+    )
+
+
+# =========================================================
+# REMOVE FROM WISHLIST
+# =========================================================
+
+@main_bp.route(
+    "/wishlist/remove/<int:wishlist_id>",
+    methods=["POST"]
+)
+def remove_from_wishlist(wishlist_id):
+
+    # -----------------------------------------------------
+    # LOGIN REQUIRED
+    # -----------------------------------------------------
+
+    user_id = session.get("user_id")
+
+    if not user_id:
+
+        flash(
+            "Please login to manage your wishlist.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("auth.login")
+        )
+
+
+    # -----------------------------------------------------
+    # FIND CUSTOMER'S OWN WISHLIST ITEM
+    # -----------------------------------------------------
+
+    wishlist_item = (
+        WishlistItem.query
+        .filter_by(
+            id=wishlist_id,
+            user_id=user_id
+        )
+        .first()
+    )
+
+
+    if not wishlist_item:
+
+        flash(
+            "Wishlist item not found.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("main.wishlist")
+        )
+
+
+    # -----------------------------------------------------
+    # REMOVE
+    # -----------------------------------------------------
+
+    db.session.delete(
+        wishlist_item
+    )
+
+    db.session.commit()
+
+
+    flash(
+        "Product removed from wishlist.",
+        "success"
+    )
+
+
+    return redirect(
+        url_for("main.wishlist")
+    )
 
 # =========================================================
 # CHECKOUT
@@ -3092,4 +3540,24 @@ def set_default_address(address_id):
             "main.profile",
             section="addresses"
         )
+    )
+
+
+# =========================================================
+# PROJECT INFORMATION PAGES
+# =========================================================
+
+@main_bp.route("/privacy-policy")
+def privacy_policy():
+
+    return render_template(
+        "privacy_policy.html"
+    )
+
+
+@main_bp.route("/terms-and-conditions")
+def terms_conditions():
+
+    return render_template(
+        "terms_conditions.html"
     )

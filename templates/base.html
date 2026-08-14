@@ -127,33 +127,52 @@
     Categories
 </a>
                     </li>
+                    
+                    <li class="nav-item">
+    <a
+        class="nav-link"
+        href="{{ url_for('main.products') }}"
+    >
+        Products
+    </a>
+</li>
 
                 </ul>
 
                 <!-- Search -->
-                <form class="d-flex me-lg-3 mb-3 mb-lg-0" role="search">
+                <form
+    class="d-flex me-lg-3 mb-3 mb-lg-0"
+    role="search"
+    method="GET"
+    action="{{ url_for('main.products') }}"
+>
 
-                    <input
-                        class="form-control"
-                        type="search"
-                        placeholder="Search products..."
-                        aria-label="Search products"
-                    >
+    <input
+        class="form-control"
+        type="search"
+        name="search"
+        placeholder="Search products..."
+        aria-label="Search products"
+        value="{{ request.args.get('search', '') }}"
+    >
 
-                    <button
-                        class="btn btn-primary ms-2"
-                        type="submit"
-                    >
-                        Search
-                    </button>
+    <button
+        class="btn btn-primary ms-2"
+        type="submit"
+    >
+        Search
+    </button>
 
-                </form>
+</form>
 
                 <!-- Right Navigation -->
                 <ul class="navbar-nav align-items-lg-center">
 
-                    <li class="nav-item">
-    <a class="nav-link" href="#">
+<li class="nav-item">
+    <a
+        class="nav-link"
+        href="{{ url_for('main.wishlist') }}"
+    >
         ♡ Wishlist
     </a>
 </li>
@@ -246,34 +265,40 @@
                 </div>
 
 
-                <!-- Quick Links -->
-                <div class="col-md-4">
+<!-- Quick Links -->
+<div class="col-md-4">
 
-                    <h5>Quick Links</h5>
+    <h5>Quick Links</h5>
 
-                    <ul class="list-unstyled">
+    <ul class="list-unstyled">
 
-                        <li>
-                            <a href="/" class="footer-link">
-                                Home
-                            </a>
-                        </li>
+        <li>
+            <a href="/" class="footer-link">
+                Home
+            </a>
+        </li>
 
-                        <li>
-                            <a href="#" class="footer-link">
-                                Privacy Policy
-                            </a>
-                        </li>
+        <li>
+            <a
+                href="{{ url_for('main.privacy_policy') }}"
+                class="footer-link"
+            >
+                Privacy Notice
+            </a>
+        </li>
 
-                        <li>
-                            <a href="#" class="footer-link">
-                                Terms & Conditions
-                            </a>
-                        </li>
+        <li>
+            <a
+                href="{{ url_for('main.terms_conditions') }}"
+                class="footer-link"
+            >
+                Terms & Conditions
+            </a>
+        </li>
 
-                    </ul>
+    </ul>
 
-                </div>
+</div>
 
 
                 <!-- Contact -->
@@ -303,8 +328,10 @@
             <div class="container py-3 text-center">
 
                 <small>
-                    © 2026 ShopEase. All rights reserved.
-                </small>
+    © 2026 ShopEase. All rights reserved.
+    <span class="mx-2">|</span>
+    Designed & Developed by Nikhil Kadam
+</small>
 
             </div>
 

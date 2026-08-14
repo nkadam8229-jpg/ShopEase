@@ -435,14 +435,32 @@
 </form>
 
 
-                        <button
-                            type="button"
-                            class="btn btn-outline-secondary btn-lg px-4"
-                            disabled
-                            title="Wishlist functionality will be added later"
-                        >
-                            ♡ Wishlist
-                        </button>
+                        <form
+    method="POST"
+    action="{{ url_for('main.add_to_wishlist') }}"
+    class="d-inline"
+>
+
+    <input
+        type="hidden"
+        name="product_id"
+        value="{{ product.id }}"
+    >
+
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="{{ csrf_token() }}"
+    >
+
+    <button
+        type="submit"
+        class="btn btn-outline-secondary btn-lg px-4"
+    >
+        ♡ Wishlist
+    </button>
+
+</form>
 
                     </div>
 

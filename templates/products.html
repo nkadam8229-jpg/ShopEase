@@ -13,16 +13,25 @@ ShopEase | Products
     <div class="container">
 
         <!-- =================================================
-             CATEGORY HEADER + SUBCATEGORIES
+             MAIN PRODUCTS LAYOUT
         ================================================== -->
 
-        <div class="row align-items-start mb-4">
+        <div class="row g-4">
 
-            <!-- CATEGORY INFORMATION -->
 
-            <div class="col-lg-4">
+            <!-- =================================================
+                 LEFT SIDE
+                 CATEGORY INFORMATION + FILTER
+            ================================================== -->
 
-                <div class="product-listing-header">
+            <div class="col-12 col-lg-4">
+
+
+                <!-- =================================================
+                     CATEGORY INFORMATION
+                ================================================== -->
+
+                <div class="product-listing-header mb-4">
 
                     {% if category %}
 
@@ -48,148 +57,10 @@ ShopEase | Products
 
                 </div>
 
-            </div>
 
-
-            <!-- SUBCATEGORIES -->
-
-            <div class="col-lg-8">
-
-                {% if subcategories %}
-
-                    <div>
-
-                        <h5 class="fw-semibold mb-3">
-                            Shop by Subcategory
-                        </h5>
-
-                        <div class="subcategory-grid">
-
-                            {% if category %}
-
-                                <a
-                                    href="{{ url_for(
-                                        'main.products',
-                                        category=category.slug
-                                    ) }}"
-                                    class="text-decoration-none"
-                                >
-
-                                    <div
-                                        class="subcategory-card
-                                        {% if not selected_subcategory %}
-                                            active
-                                        {% endif %}"
-                                    >
-
-                                        <div
-                                            class="subcategory-image-wrapper
-                                            subcategory-no-image"
-                                        >
-                                            All
-                                        </div>
-
-                                        <div
-                                            class="subcategory-card-body"
-                                        >
-                                            <h6>
-                                                All Products
-                                            </h6>
-                                        </div>
-
-                                    </div>
-
-                                </a>
-
-                            {% endif %}
-
-
-                            {% for subcategory in subcategories %}
-
-                                <a
-                                    href="{{ url_for(
-                                        'main.products',
-                                        category=category.slug,
-                                        subcategory=subcategory.slug
-                                    ) }}"
-                                    class="text-decoration-none"
-                                >
-
-                                    <div
-                                        class="subcategory-card
-                                        {% if selected_subcategory
-                                            and selected_subcategory.id
-                                            == subcategory.id %}
-                                            active
-                                        {% endif %}"
-                                    >
-
-                                        <div
-                                            class="subcategory-image-wrapper"
-                                        >
-
-                                            {% if subcategory.image_key %}
-
-                                                <img
-                                                    src="{{ url_for(
-                                                        'main.subcategory_image',
-                                                        subcategory_id=subcategory.id
-                                                    ) }}"
-                                                    alt="{{ subcategory.name }}"
-                                                    class="subcategory-image"
-                                                >
-
-                                            {% else %}
-
-                                                <div
-                                                    class="subcategory-image-placeholder"
-                                                >
-                                                    {{ subcategory.name[0] }}
-                                                </div>
-
-                                            {% endif %}
-
-                                        </div>
-
-                                        <div
-                                            class="subcategory-card-body"
-                                        >
-
-                                            <h6>
-                                                {{ subcategory.name }}
-                                            </h6>
-
-                                        </div>
-
-                                    </div>
-
-                                </a>
-
-                            {% endfor %}
-
-                        </div>
-
-                    </div>
-
-                {% endif %}
-
-            </div>
-
-        </div>
-
-
-        <!-- =================================================
-             FILTER + PRODUCTS
-        ================================================== -->
-
-        <div class="row g-4">
-
-
-            <!-- =================================================
-                 FILTER SIDEBAR
-            ================================================== -->
-
-            <div class="col-12 col-lg-3">
+                <!-- =================================================
+                     FILTER SIDEBAR
+                ================================================== -->
 
                 <div class="product-filter-card">
 
@@ -510,10 +381,135 @@ ShopEase | Products
 
 
             <!-- =================================================
-                 PRODUCTS AREA
+                 RIGHT SIDE
+                 SUBCATEGORIES + PRODUCTS
             ================================================== -->
 
-            <div class="col-12 col-lg-9">
+            <div class="col-12 col-lg-8">
+
+
+                <!-- =================================================
+                     SUBCATEGORIES
+                ================================================== -->
+
+                {% if subcategories %}
+
+                    <div class="mb-4">
+
+                        <h5 class="fw-semibold mb-3">
+                            Shop by Subcategory
+                        </h5>
+
+
+                        <div class="subcategory-grid">
+
+                            {% if category %}
+
+                                <a
+                                    href="{{ url_for(
+                                        'main.products',
+                                        category=category.slug
+                                    ) }}"
+                                    class="text-decoration-none"
+                                >
+
+                                    <div
+                                        class="subcategory-card
+                                        {% if not selected_subcategory %}
+                                            active
+                                        {% endif %}"
+                                    >
+
+                                        <div
+                                            class="subcategory-image-wrapper
+                                            subcategory-no-image"
+                                        >
+                                            All
+                                        </div>
+
+                                        <div
+                                            class="subcategory-card-body"
+                                        >
+                                            <h6>
+                                                All Products
+                                            </h6>
+                                        </div>
+
+                                    </div>
+
+                                </a>
+
+                            {% endif %}
+
+
+                            {% for subcategory in subcategories %}
+
+                                <a
+                                    href="{{ url_for(
+                                        'main.products',
+                                        category=category.slug,
+                                        subcategory=subcategory.slug
+                                    ) }}"
+                                    class="text-decoration-none"
+                                >
+
+                                    <div
+                                        class="subcategory-card
+                                        {% if selected_subcategory
+                                            and selected_subcategory.id
+                                            == subcategory.id %}
+                                            active
+                                        {% endif %}"
+                                    >
+
+                                        <div
+                                            class="subcategory-image-wrapper"
+                                        >
+
+                                            {% if subcategory.image_key %}
+
+                                                <img
+                                                    src="{{ url_for(
+                                                        'main.subcategory_image',
+                                                        subcategory_id=subcategory.id
+                                                    ) }}"
+                                                    alt="{{ subcategory.name }}"
+                                                    class="subcategory-image"
+                                                >
+
+                                            {% else %}
+
+                                                <div
+                                                    class="subcategory-image-placeholder"
+                                                >
+                                                    {{ subcategory.name[0] }}
+                                                </div>
+
+                                            {% endif %}
+
+                                        </div>
+
+                                        <div
+                                            class="subcategory-card-body"
+                                        >
+
+                                            <h6>
+                                                {{ subcategory.name }}
+                                            </h6>
+
+                                        </div>
+
+                                    </div>
+
+                                </a>
+
+                            {% endfor %}
+
+                        </div>
+
+                    </div>
+
+                {% endif %}
 
 
                 <!-- =================================================
@@ -530,13 +526,13 @@ ShopEase | Products
 
                     <div class="product-result-count">
 
-    <strong>
-        {{ products|length }}
-    </strong>
+                        <strong>
+                            {{ products|length }}
+                        </strong>
 
-    product{% if products|length != 1 %}s{% endif %}
+                        product{% if products|length != 1 %}s{% endif %}
 
-</div>
+                    </div>
 
 
                     <form

@@ -12,7 +12,7 @@ from flask import (
 )
 
 from pathlib import Path
-from app import db
+from app import db, csrf
 
 from app.models import (
     Banner,
@@ -26,7 +26,8 @@ from app.models import (
     Order,
     OrderItem,
     User,
-    WishlistItem
+    WishlistItem,
+    TrafficEvent
 )
 from werkzeug.security import (
     check_password_hash,
@@ -3561,3 +3562,318 @@ def terms_conditions():
     return render_template(
         "terms_conditions.html"
     )
+
+# =========================================================
+# TRAFFIC TRACKING
+# =========================================================
+
+@main_bp.route(
+    "/track-traffic",
+    methods=["POST"]
+)
+@csrf.exempt
+def track_traffic():
+
+    # -----------------------------------------------------
+    # READ JSON DATA
+    # -----------------------------------------------------
+
+    data = request.get_json(
+        silent=True
+    ) or {}
+
+
+    visitor_id = str(
+        data.get(
+            "visitor_id",
+            ""
+        )
+    ).strip()
+
+    session_id = str(
+        data.get(
+            "session_id",
+            ""
+        )
+    ).strip()
+
+    event_type = str(
+        data.get(
+            "event_type",
+            ""
+        )
+    ).strip()
+
+    page = str(
+        data.get(
+            "page",
+            ""
+        )
+    ).strip()
+
+
+    # -----------------------------------------------------
+    # BASIC VALIDATION
+    # -----------------------------------------------------
+
+    if not visitor_id or not session_id or not event_type:
+
+        return {
+            "success": False
+        }, 400
+
+
+    # -----------------------------------------------------
+    # ALLOWED EVENT TYPES
+    #
+    # We keep this limited so random values cannot be
+    # stored in the analytics table.
+    # -----------------------------------------------------
+
+    allowed_events = {
+        "page_view",
+        "product_view",
+        "category_view",
+        "subcategory_view",
+        "activity"
+    }
+
+
+    if event_type not in allowed_events:
+
+        return {
+            "success": False
+        }, 400
+
+
+    # -----------------------------------------------------
+    # CURRENT LOGGED-IN USER
+    #
+    # Guest users will have user_id = None.
+    # -----------------------------------------------------
+
+    user_id = session.get(
+        "user_id"
+    )
+
+
+    # -----------------------------------------------------
+    # RESOLVE ENTITY IDS FROM CURRENT PAGE
+    #
+    # Customer pages do not need to send database IDs.
+    # We resolve them here from the URL.
+    # -----------------------------------------------------
+
+    product_id = None
+    category_id = None
+    subcategory_id = None
+
+
+    try:
+
+        from urllib.parse import (
+            urlparse,
+            parse_qs
+        )
+
+        parsed_url = urlparse(
+            page
+        )
+
+        path = parsed_url.path
+
+        query_params = parse_qs(
+            parsed_url.query
+        )
+
+
+        # -------------------------------------------------
+        # PRODUCT DETAIL
+        #
+        # Example:
+        # /products/iphone-15
+        # -------------------------------------------------
+
+        if (
+            event_type == "product_view"
+            and path.startswith("/products/")
+        ):
+
+            product_slug = (
+                path.split(
+                    "/products/",
+                    1
+                )[1]
+            )
+
+
+            product = (
+                Product.query
+                .filter_by(
+                    slug=product_slug,
+                    is_active=True
+                )
+                .first()
+            )
+
+
+            if product:
+
+                product_id = product.id
+
+                category_id = (
+                    product.category_id
+                )
+
+                subcategory_id = (
+                    product.subcategory_id
+                )
+
+
+        # -------------------------------------------------
+        # CATEGORY VIEW
+        #
+        # Example:
+        # /products?category=electronics
+        # -------------------------------------------------
+
+        elif (
+            event_type == "category_view"
+            and path == "/products"
+        ):
+
+            category_slug = (
+                query_params
+                .get(
+                    "category",
+                    [None]
+                )[0]
+            )
+
+
+            if category_slug:
+
+                category = (
+                    Category.query
+                    .filter_by(
+                        slug=category_slug,
+                        is_active=True
+                    )
+                    .first()
+                )
+
+
+                if category:
+
+                    category_id = category.id
+
+
+        # -------------------------------------------------
+        # SUBCATEGORY VIEW
+        #
+        # Example:
+        # /products?category=electronics
+        # &subcategory=shirts
+        # -------------------------------------------------
+
+        elif (
+            event_type == "subcategory_view"
+            and path == "/products"
+        ):
+
+            category_slug = (
+                query_params
+                .get(
+                    "category",
+                    [None]
+                )[0]
+            )
+
+            subcategory_slug = (
+                query_params
+                .get(
+                    "subcategory",
+                    [None]
+                )[0]
+            )
+
+
+            if subcategory_slug:
+
+                subcategory = (
+                    Subcategory.query
+                    .filter_by(
+                        slug=subcategory_slug,
+                        is_active=True
+                    )
+                    .first()
+                )
+
+
+                if subcategory:
+
+                    subcategory_id = (
+                        subcategory.id
+                    )
+
+                    category_id = (
+                        subcategory.category_id
+                    )
+
+
+    except Exception:
+
+        current_app.logger.exception(
+            "TRAFFIC ENTITY RESOLUTION FAILED"
+        )
+
+
+    # -----------------------------------------------------
+    # CREATE EVENT
+    # -----------------------------------------------------
+
+    traffic_event = TrafficEvent(
+
+        visitor_id=visitor_id,
+
+        user_id=user_id,
+
+        session_id=session_id,
+
+        event_type=event_type,
+
+        page=page[:255],
+
+        product_id=product_id,
+
+        category_id=category_id,
+
+        subcategory_id=subcategory_id
+    )
+
+
+    db.session.add(
+        traffic_event
+    )
+
+
+    try:
+
+        db.session.commit()
+
+    except Exception:
+
+        db.session.rollback()
+
+        current_app.logger.exception(
+            "TRAFFIC EVENT FAILED"
+        )
+
+        return {
+            "success": False
+        }, 500
+
+
+    return {
+        "success": True
+    }, 200

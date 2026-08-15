@@ -1050,3 +1050,115 @@ class OrderItem(db.Model):
             lazy=True
         )
     )
+
+# =========================================================
+# TRAFFIC EVENT
+# =========================================================
+
+class TrafficEvent(db.Model):
+
+    __tablename__ = "traffic_events"
+
+    id = db.Column(
+        db.BigInteger,
+        primary_key=True,
+        autoincrement=True
+    )
+
+    visitor_id = db.Column(
+        db.String(100),
+        nullable=False,
+        index=True
+    )
+
+    user_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("users.id"),
+        nullable=True,
+        index=True
+    )
+
+    session_id = db.Column(
+        db.String(100),
+        nullable=False,
+        index=True
+    )
+
+    event_type = db.Column(
+        db.String(50),
+        nullable=False,
+        index=True
+    )
+
+    page = db.Column(
+        db.String(255),
+        nullable=True
+    )
+
+    product_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("products.id"),
+        nullable=True,
+        index=True
+    )
+
+    category_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("categories.id"),
+        nullable=True,
+        index=True
+    )
+
+    subcategory_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("subcategories.id"),
+        nullable=True,
+        index=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        server_default=db.func.current_timestamp(),
+        index=True
+    )
+
+    user = db.relationship(
+        "User",
+        backref=db.backref(
+            "traffic_events",
+            lazy=True
+        )
+    )
+
+    product = db.relationship(
+        "Product",
+        backref=db.backref(
+            "traffic_events",
+            lazy=True
+        )
+    )
+
+    category = db.relationship(
+        "Category",
+        backref=db.backref(
+            "traffic_events",
+            lazy=True
+        )
+    )
+
+    subcategory = db.relationship(
+        "Subcategory",
+        backref=db.backref(
+            "traffic_events",
+            lazy=True
+        )
+    )
+
+    def __repr__(self):
+
+        return (
+            f"<TrafficEvent "
+            f"{self.event_type} "
+            f"visitor={self.visitor_id}>"
+        )

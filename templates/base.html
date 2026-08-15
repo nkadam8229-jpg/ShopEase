@@ -352,5 +352,262 @@
         src="{{ url_for('static', filename='js/main.js') }}">
     </script>
 
+    <!-- =========================================================
+     SHOP EASE TRAFFIC TRACKER
+========================================================= -->
+
+<script>
+
+(function () {
+
+    // -------------------------------------------------
+    // GET OR CREATE ANONYMOUS VISITOR ID
+    // -------------------------------------------------
+
+    let visitorId = localStorage.getItem(
+        "shopease_visitor_id"
+    );
+
+    if (!visitorId) {
+
+        visitorId =
+            "visitor_" +
+            Date.now() +
+            "_" +
+            Math.random()
+                .toString(36)
+                .substring(2, 12);
+
+        localStorage.setItem(
+            "shopease_visitor_id",
+            visitorId
+        );
+    }
+
+    // -------------------------------------------------
+    // GET OR CREATE SESSION ID
+    // -------------------------------------------------
+
+    let sessionId = sessionStorage.getItem(
+        "shopease_session_id"
+    );
+
+    if (!sessionId) {
+
+        sessionId =
+            "session_" +
+            Date.now() +
+            "_" +
+            Math.random()
+                .toString(36)
+                .substring(2, 12);
+
+        sessionStorage.setItem(
+            "shopease_session_id",
+            sessionId
+        );
+    }   
+
+
+    // -------------------------------------------------
+    // SEND TRAFFIC EVENT
+    // -------------------------------------------------
+
+    function trackTraffic(
+        eventType,
+        extraData = {}
+    ) {
+
+        fetch(
+            "{{ url_for('main.track_traffic') }}",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body: JSON.stringify({
+
+                    visitor_id: visitorId,
+
+                    session_id: sessionId,
+
+                    event_type: eventType,
+
+                                        page:
+                        window.location.pathname
+                        + window.location.search,
+
+                    ...extraData
+                }),
+
+                keepalive: true
+            }
+        ).catch(
+            function () {
+                // Traffic tracking must never
+                // affect the customer experience.
+            }
+        );
+    }
+
+
+// -------------------------------------------------
+// PAGE / PRODUCT / CATEGORY / SUBCATEGORY TRACKING
+// -------------------------------------------------
+
+(function () {
+
+    const path =
+        window.location.pathname;
+
+    const params =
+        new URLSearchParams(
+            window.location.search
+        );
+
+
+    // -------------------------------------------------
+    // PRODUCT DETAIL
+    //
+    // /products/<product-slug>
+    // -------------------------------------------------
+
+    const productMatch =
+        path.match(
+            /^\/products\/([^\/]+)$/
+        );
+
+
+    if (productMatch) {
+
+        trackTraffic(
+            "product_view"
+        );
+
+        return;
+    }
+
+
+    // -------------------------------------------------
+    // PRODUCT LISTING
+    // -------------------------------------------------
+
+    if (path === "/products") {
+
+        const category =
+            params.get("category");
+
+        const subcategory =
+            params.get("subcategory");
+
+
+        // ---------------------------------------------
+        // SUBCATEGORY VIEW
+        // ---------------------------------------------
+
+        if (
+            category &&
+            subcategory
+        ) {
+
+            trackTraffic(
+                "subcategory_view"
+            );
+
+            return;
+        }
+
+
+        // ---------------------------------------------
+        // CATEGORY VIEW
+        // ---------------------------------------------
+
+        if (category) {
+
+            trackTraffic(
+                "category_view"
+            );
+
+            return;
+        }
+    }
+
+
+    // -------------------------------------------------
+    // ALL OTHER PAGES
+    // -------------------------------------------------
+
+    trackTraffic(
+        "page_view"
+    );
+
+})();
+
+
+    // -------------------------------------------------
+    // ACTIVITY TRACKING
+    //
+    // Used later for approximate session duration.
+    // Send at most once every 30 seconds.
+    // -------------------------------------------------
+
+    let lastActivity =
+        Date.now();
+
+
+    function recordActivity() {
+
+        const now =
+            Date.now();
+
+
+        if (
+            now - lastActivity
+            >= 30000
+        ) {
+
+            lastActivity = now;
+
+            trackTraffic(
+                "activity"
+            );
+        }
+    }
+
+
+    document.addEventListener(
+        "click",
+        recordActivity
+    );
+
+
+    document.addEventListener(
+        "scroll",
+        recordActivity,
+        {
+            passive: true
+        }
+    );
+
+
+    document.addEventListener(
+        "mousemove",
+        recordActivity
+    );
+
+
+    document.addEventListener(
+        "keydown",
+        recordActivity
+    );
+
+
+})();
+
+</script>
+
 </body>
 </html>

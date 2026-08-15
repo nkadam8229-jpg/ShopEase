@@ -24,7 +24,8 @@ from app.models import (
     Banner,
     User,
     Order,
-    OrderItem
+    OrderItem,
+    TrafficEvent
 )
 from app.services.upload_service import upload_image
 from app.services.storage_service import StorageService
@@ -5273,6 +5274,709 @@ def revenue():
         subcategory_revenue=subcategory_revenue,
 
         subcategory_graph=subcategory_graph
+    )
+
+# =========================================================
+# TRAFFIC MANAGEMENT
+# =========================================================
+
+@admin_bp.route("/traffic")
+def traffic():
+
+    if "admin_id" not in session:
+        return redirect(
+            url_for("admin.login")
+        )
+
+    from datetime import datetime
+    from collections import defaultdict
+
+
+    # -----------------------------------------------------
+    # GET ALL TRAFFIC EVENTS
+    # -----------------------------------------------------
+
+    events = (
+        TrafficEvent.query
+        .order_by(
+            TrafficEvent.created_at.asc()
+        )
+        .all()
+    )
+
+
+    # -----------------------------------------------------
+    # BASIC VISITOR / SESSION STATISTICS
+    # -----------------------------------------------------
+
+    visitor_users = defaultdict(set)
+
+    session_users = defaultdict(set)
+
+    session_times = defaultdict(list)
+
+
+    for event in events:
+
+        if not event.visitor_id:
+            continue
+
+        if event.user_id:
+
+            visitor_users[
+                event.visitor_id
+            ].add(
+                event.user_id
+            )
+
+        if event.session_id:
+
+            if event.user_id:
+
+                session_users[
+                    event.session_id
+                ].add(
+                    event.user_id
+                )
+
+            if event.created_at:
+
+                session_times[
+                    event.session_id
+                ].append(
+                    event.created_at
+                )
+
+
+    # -----------------------------------------------------
+    # TOTAL VISITORS
+    # -----------------------------------------------------
+
+    total_visitors = len(
+        {
+            event.visitor_id
+            for event in events
+            if event.visitor_id
+        }
+    )
+
+
+    # -----------------------------------------------------
+    # LOGGED-IN / GUEST VISITORS
+    # -----------------------------------------------------
+
+    logged_in_visitors = len(
+        {
+            visitor_id
+            for visitor_id, users
+            in visitor_users.items()
+            if users
+        }
+    )
+
+
+    guest_visitors = max(
+        total_visitors - logged_in_visitors,
+        0
+    )
+
+
+    # -----------------------------------------------------
+    # TOTAL SESSIONS
+    # -----------------------------------------------------
+
+    total_sessions = len(
+        {
+            event.session_id
+            for event in events
+            if event.session_id
+        }
+    )
+
+
+    # =====================================================
+    # SESSION DURATION
+    # =====================================================
+
+    session_durations = []
+
+
+    for session_id, timestamps in session_times.items():
+
+        if len(timestamps) < 2:
+            continue
+
+        start_time = min(timestamps)
+
+        end_time = max(timestamps)
+
+        duration = (
+            end_time - start_time
+        ).total_seconds()
+
+
+        # Ignore unrealistic sessions
+        if 0 <= duration <= 86400:
+
+            session_durations.append(
+                duration
+            )
+
+
+    average_session_seconds = (
+        sum(session_durations)
+        / len(session_durations)
+        if session_durations
+        else 0
+    )
+
+
+    average_session_minutes = round(
+        average_session_seconds / 60,
+        1
+    )
+
+
+    # =====================================================
+    # HOURLY TRAFFIC
+    # =====================================================
+
+    hourly_visitors = defaultdict(set)
+
+
+    for event in events:
+
+        if (
+            event.created_at
+            and event.visitor_id
+        ):
+
+            hourly_visitors[
+                event.created_at.hour
+            ].add(
+                event.visitor_id
+            )
+
+
+    hourly_labels = [
+        f"{hour:02d}:00"
+        for hour in range(24)
+    ]
+
+
+    hourly_values = [
+        len(
+            hourly_visitors.get(
+                hour,
+                set()
+            )
+        )
+        for hour in range(24)
+    ]
+
+
+    peak_hour_index = (
+        max(
+            range(24),
+            key=lambda hour:
+                hourly_values[hour]
+        )
+        if events
+        else 0
+    )
+
+
+    peak_hour = (
+        f"{peak_hour_index:02d}:00"
+    )
+
+
+    peak_hour_visitors = (
+        hourly_values[
+            peak_hour_index
+        ]
+        if events
+        else 0
+    )
+
+
+    # =====================================================
+    # DAILY TRAFFIC
+    # =====================================================
+
+    daily_visitors = defaultdict(set)
+
+
+    for event in events:
+
+        if (
+            event.created_at
+            and event.visitor_id
+        ):
+
+            day_key = (
+                event.created_at.date()
+            )
+
+            daily_visitors[
+                day_key
+            ].add(
+                event.visitor_id
+            )
+
+
+    daily_keys = sorted(
+        daily_visitors.keys()
+    )[-14:]
+
+
+    daily_labels = [
+        day.strftime("%d %b")
+        for day in daily_keys
+    ]
+
+
+    daily_values = [
+        len(
+            daily_visitors[day]
+        )
+        for day in daily_keys
+    ]
+
+
+    # =====================================================
+    # MONTHLY TRAFFIC
+    # =====================================================
+
+    monthly_visitors = defaultdict(set)
+
+
+    for event in events:
+
+        if (
+            event.created_at
+            and event.visitor_id
+        ):
+
+            month_key = (
+                event.created_at.strftime(
+                    "%Y-%m"
+                )
+            )
+
+            monthly_visitors[
+                month_key
+            ].add(
+                event.visitor_id
+            )
+
+
+    monthly_keys = sorted(
+        monthly_visitors.keys()
+    )[-6:]
+
+
+    monthly_labels = []
+
+
+    for month_key in monthly_keys:
+
+        month_date = datetime.strptime(
+            month_key,
+            "%Y-%m"
+        )
+
+        monthly_labels.append(
+            month_date.strftime(
+                "%b %Y"
+            )
+        )
+
+
+    monthly_values = [
+        len(
+            monthly_visitors[month]
+        )
+        for month in monthly_keys
+    ]
+
+
+    # =====================================================
+    # LOGGED-IN VS GUEST
+    # =====================================================
+
+    visitor_type_labels = [
+        "Logged-in",
+        "Guest"
+    ]
+
+
+    visitor_type_values = [
+        logged_in_visitors,
+        guest_visitors
+    ]
+
+
+    # =====================================================
+    # PRODUCT VIEWS
+    # =====================================================
+
+    product_counts = defaultdict(int)
+
+    product_visitors = defaultdict(set)
+
+
+    for event in events:
+
+        if (
+            event.event_type
+            == "product_view"
+            and event.product_id
+        ):
+
+            product_counts[
+                event.product_id
+            ] += 1
+
+            if event.visitor_id:
+
+                product_visitors[
+                    event.product_id
+                ].add(
+                    event.visitor_id
+                )
+
+
+    top_product_ids = sorted(
+        product_counts,
+        key=product_counts.get,
+        reverse=True
+    )[:10]
+
+
+    top_products = []
+
+
+    for product_id in top_product_ids:
+
+        product = db.session.get(
+            Product,
+            product_id
+        )
+
+        if not product:
+            continue
+
+
+        image = None
+
+
+        if product.images:
+
+            image = next(
+                (
+                    item
+                    for item in product.images
+                    if item.is_primary
+                ),
+                product.images[0]
+            )
+
+
+        top_products.append(
+            {
+                "id": product.id,
+
+                "name": product.name,
+
+                "views": product_counts[
+                    product_id
+                ],
+
+                "unique_visitors": len(
+                    product_visitors.get(
+                        product_id,
+                        set()
+                    )
+                ),
+
+                "image_id": (
+                    image.id
+                    if image
+                    else None
+                )
+            }
+        )
+
+
+    # =====================================================
+    # CATEGORY VIEWS
+    # =====================================================
+
+    category_counts = defaultdict(int)
+
+    category_visitors = defaultdict(set)
+
+
+    for event in events:
+
+        if (
+            event.event_type
+            == "category_view"
+            and event.category_id
+        ):
+
+            category_counts[
+                event.category_id
+            ] += 1
+
+            if event.visitor_id:
+
+                category_visitors[
+                    event.category_id
+                ].add(
+                    event.visitor_id
+                )
+
+
+    top_category_ids = sorted(
+        category_counts,
+        key=category_counts.get,
+        reverse=True
+    )
+
+
+    category_traffic = []
+
+
+    for category_id in top_category_ids:
+
+        category = db.session.get(
+            Category,
+            category_id
+        )
+
+        if not category:
+            continue
+
+
+        category_traffic.append(
+            {
+                "id": category.id,
+
+                "name": category.name,
+
+                "views": category_counts[
+                    category_id
+                ],
+
+                "unique_visitors": len(
+                    category_visitors.get(
+                        category_id,
+                        set()
+                    )
+                ),
+
+                "image_url": (
+                    url_for(
+                        "admin.category_image",
+                        category_id=category.id
+                    )
+                    if category.image_key
+                    else None
+                )
+            }
+        )
+
+
+    # =====================================================
+    # SUBCATEGORY VIEWS
+    # =====================================================
+
+    subcategory_counts = defaultdict(int)
+
+    subcategory_visitors = defaultdict(set)
+
+
+    for event in events:
+
+        if (
+            event.event_type
+            == "subcategory_view"
+            and event.subcategory_id
+        ):
+
+            subcategory_counts[
+                event.subcategory_id
+            ] += 1
+
+            if event.visitor_id:
+
+                subcategory_visitors[
+                    event.subcategory_id
+                ].add(
+                    event.visitor_id
+                )
+
+
+    top_subcategory_ids = sorted(
+        subcategory_counts,
+        key=subcategory_counts.get,
+        reverse=True
+    )
+
+
+    subcategory_traffic = []
+
+
+    for subcategory_id in top_subcategory_ids:
+
+        subcategory = db.session.get(
+            Subcategory,
+            subcategory_id
+        )
+
+        if not subcategory:
+            continue
+
+
+        subcategory_traffic.append(
+            {
+                "id": subcategory.id,
+
+                "name": subcategory.name,
+
+                "category_name": (
+                    subcategory.category.name
+                    if subcategory.category
+                    else "—"
+                ),
+
+                "views": subcategory_counts[
+                    subcategory_id
+                ],
+
+                "unique_visitors": len(
+                    subcategory_visitors.get(
+                        subcategory_id,
+                        set()
+                    )
+                ),
+
+                "image_url": (
+                    url_for(
+                        "admin.subcategory_image",
+                        subcategory_id=subcategory.id
+                    )
+                    if subcategory.image_key
+                    else None
+                )
+            }
+        )
+
+
+    # =====================================================
+    # TOTAL VIEWS
+    # =====================================================
+
+    total_page_views = sum(
+        1
+        for event in events
+        if event.event_type == "page_view"
+    )
+
+
+    total_product_views = sum(
+        1
+        for event in events
+        if event.event_type == "product_view"
+    )
+
+
+    total_category_views = sum(
+        1
+        for event in events
+        if event.event_type == "category_view"
+    )
+
+
+    total_subcategory_views = sum(
+        1
+        for event in events
+        if event.event_type == "subcategory_view"
+    )
+
+
+    # =====================================================
+    # RENDER TRAFFIC PAGE
+    # =====================================================
+
+    return render_template(
+        "admin/traffic.html",
+
+        total_visitors=total_visitors,
+
+        logged_in_visitors=logged_in_visitors,
+
+        guest_visitors=guest_visitors,
+
+        total_sessions=total_sessions,
+
+        average_session_minutes=(
+            average_session_minutes
+        ),
+
+        total_page_views=(
+            total_page_views
+        ),
+
+        total_product_views=(
+            total_product_views
+        ),
+
+        total_category_views=(
+            total_category_views
+        ),
+
+        total_subcategory_views=(
+            total_subcategory_views
+        ),
+
+        peak_hour=peak_hour,
+
+        peak_hour_visitors=(
+            peak_hour_visitors
+        ),
+
+        hourly_labels=hourly_labels,
+
+        hourly_values=hourly_values,
+
+        daily_labels=daily_labels,
+
+        daily_values=daily_values,
+
+        monthly_labels=monthly_labels,
+
+        monthly_values=monthly_values,
+
+        visitor_type_labels=(
+            visitor_type_labels
+        ),
+
+        visitor_type_values=(
+            visitor_type_values
+        ),
+
+        top_products=top_products,
+
+        category_traffic=(
+            category_traffic
+        ),
+
+        subcategory_traffic=(
+            subcategory_traffic
+        )
     )
 # =========================================================
 # BANNER MANAGEMENT

@@ -1,0 +1,1466 @@
+{% extends "admin/base.html" %}
+
+{% block title %}
+Traffic | ShopEase Admin
+{% endblock %}
+
+{% block content %}
+
+<style>
+
+/* =========================================================
+   TRAFFIC PAGE
+========================================================= */
+
+.traffic-page {
+    padding: 18px 22px;
+}
+
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.traffic-header {
+    margin-bottom: 14px;
+}
+
+.traffic-header h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.traffic-header p {
+    margin: 3px 0 0;
+    color: #6c757d;
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   MAIN TABS
+========================================================= */
+
+.traffic-main-tabs {
+    display: flex;
+    gap: 5px;
+    border-bottom: 1px solid #dee2e6;
+    margin-bottom: 15px;
+    overflow-x: auto;
+}
+
+.traffic-main-tab {
+    border: 0;
+    background: transparent;
+    color: #6c757d;
+    padding: 9px 15px;
+    font-size: 13px;
+    font-weight: 600;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.traffic-main-tab:hover {
+    color: #0d6efd;
+}
+
+.traffic-main-tab.active {
+    color: #0d6efd;
+    border-bottom-color: #0d6efd;
+}
+
+
+/* =========================================================
+   TAB CONTENT
+========================================================= */
+
+.traffic-section {
+    display: none;
+}
+
+.traffic-section.active {
+    display: block;
+}
+
+
+/* =========================================================
+   SUMMARY CARDS
+========================================================= */
+
+.traffic-card {
+    background: #fff;
+    border: 1px solid #0d1217;
+    border-radius: 8px;
+    padding: 12px 14px;
+    height: 100%;
+    box-shadow: 0 2px 6px rgba(0,0,0,.035);
+}
+
+.traffic-card-label {
+    color: #6c757d;
+    font-size: 11px;
+    margin-bottom: 4px;
+}
+
+.traffic-card-value {
+    font-size: 21px;
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   PANELS
+========================================================= */
+
+.traffic-panel {
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.035);
+    overflow: hidden;
+}
+
+.traffic-panel-header {
+    padding: 11px 14px 8px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.traffic-panel-title {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.traffic-panel-subtitle {
+    color: #6c757d;
+    font-size: 11px;
+    margin-top: 2px;
+}
+
+.traffic-panel-body {
+    padding: 12px 14px;
+}
+
+
+/* =========================================================
+   CHART
+========================================================= */
+
+.traffic-chart {
+    height: 310px;
+    position: relative;
+}
+
+.traffic-small-chart {
+    height: 285px;
+    position: relative;
+}
+
+
+/* =========================================================
+   PERIOD BUTTONS
+========================================================= */
+
+.traffic-periods {
+    display: flex;
+    gap: 5px;
+}
+
+.traffic-period-btn {
+    border: 1px solid #dee2e6;
+    background: #fff;
+    color: #6c757d;
+    border-radius: 5px;
+    padding: 4px 9px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.traffic-period-btn.active {
+    background: #0d6efd;
+    color: #fff;
+    border-color: #0d6efd;
+}
+
+
+/* =========================================================
+   TABLES
+========================================================= */
+
+.traffic-table-wrap {
+    max-height: 455px;
+    overflow-y: auto;
+}
+
+.traffic-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.traffic-table th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #f8f9fa;
+    color: #6c757d;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 9px 12px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.traffic-table td {
+    padding: 9px 12px;
+    border-top: 1px solid #f0f0f0;
+    font-size: 12px;
+    vertical-align: middle;
+}
+
+.traffic-table tbody tr:hover {
+    background: #fafafa;
+}
+
+
+/* =========================================================
+   ENTITY IMAGE
+========================================================= */
+
+.traffic-entity {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.traffic-entity-image {
+    width: 44px;
+    height: 44px;
+    border-radius: 6px;
+    object-fit: cover;
+    border: 1px solid #e5e7eb;
+    background: #f8f9fa;
+    flex-shrink: 0;
+}
+
+.traffic-entity-name {
+    font-weight: 600;
+}
+
+.traffic-count {
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   EMPTY
+========================================================= */
+
+.traffic-empty {
+    padding: 45px 15px;
+    text-align: center;
+    color: #6c757d;
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 768px) {
+
+    .traffic-page {
+        padding: 14px;
+    }
+
+    .traffic-chart {
+        height: 260px;
+    }
+
+    .traffic-small-chart {
+        height: 250px;
+    }
+
+}
+
+</style>
+
+
+<div class="traffic-page">
+
+
+    <!-- =====================================================
+         HEADER
+    ===================================================== -->
+
+    <div class="traffic-header">
+
+        <h2>
+            Website Traffic
+        </h2>
+
+        <p>
+            Visitor and browsing activity across ShopEase.
+        </p>
+
+    </div>
+
+
+    <!-- =====================================================
+         MAIN TABS
+    ===================================================== -->
+
+    <div class="traffic-main-tabs">
+
+        <button
+            type="button"
+            class="traffic-main-tab active"
+            onclick="showTrafficSection('overview', this)"
+        >
+            Overview
+        </button>
+
+        <button
+            type="button"
+            class="traffic-main-tab"
+            onclick="showTrafficSection('products', this)"
+        >
+            Products
+        </button>
+
+        <button
+            type="button"
+            class="traffic-main-tab"
+            onclick="showTrafficSection('categories', this)"
+        >
+            Categories
+        </button>
+
+        <button
+            type="button"
+            class="traffic-main-tab"
+            onclick="showTrafficSection('subcategories', this)"
+        >
+            Subcategories
+        </button>
+
+        <button
+            type="button"
+            class="traffic-main-tab"
+            onclick="showTrafficSection('visitors', this)"
+        >
+            Visitors
+        </button>
+
+    </div>
+
+
+    <!-- =====================================================
+         OVERVIEW
+    ===================================================== -->
+
+    <div
+        id="traffic-overview"
+        class="traffic-section active"
+    >
+
+
+        <!-- SUMMARY -->
+
+        <div class="row g-2 mb-3">
+
+            <div class="col-6 col-xl-3">
+                <div class="traffic-card">
+
+                    <div class="traffic-card-label">
+                        Total Visitors
+                    </div>
+
+                    <div class="traffic-card-value">
+                        {{ total_visitors }}
+                    </div>
+
+                </div>
+            </div>
+
+
+            <div class="col-6 col-xl-3">
+                <div class="traffic-card">
+
+                    <div class="traffic-card-label">
+                        Logged-in Visitors
+                    </div>
+
+                    <div class="traffic-card-value">
+                        {{ logged_in_visitors }}
+                    </div>
+
+                </div>
+            </div>
+
+
+            <div class="col-6 col-xl-3">
+                <div class="traffic-card">
+
+                    <div class="traffic-card-label">
+                        Guest Visitors
+                    </div>
+
+                    <div class="traffic-card-value">
+                        {{ guest_visitors }}
+                    </div>
+
+                </div>
+            </div>
+
+
+            <div class="col-6 col-xl-3">
+                <div class="traffic-card">
+
+                    <div class="traffic-card-label">
+                        Total Sessions
+                    </div>
+
+                    <div class="traffic-card-value">
+                        {{ total_sessions }}
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+
+        <!-- SECONDARY -->
+
+        <div class="row g-2 mb-3">
+
+            <div class="col-6 col-xl-3">
+                <div class="traffic-card">
+
+                    <div class="traffic-card-label">
+                        Page Views
+                    </div>
+
+                    <div class="traffic-card-value">
+                        {{ total_page_views }}
+                    </div>
+
+                </div>
+            </div>
+
+
+            <div class="col-6 col-xl-3">
+                <div class="traffic-card">
+
+                    <div class="traffic-card-label">
+                        Product Views
+                    </div>
+
+                    <div class="traffic-card-value">
+                        {{ total_product_views }}
+                    </div>
+
+                </div>
+            </div>
+
+
+            <div class="col-6 col-xl-3">
+                <div class="traffic-card">
+
+                    <div class="traffic-card-label">
+                        Peak Hour
+                    </div>
+
+                    <div class="traffic-card-value">
+                        {{ peak_hour }}
+                    </div>
+
+                    <small class="text-muted">
+                        {{ peak_hour_visitors }} unique visitors
+                    </small>
+
+                </div>
+            </div>
+
+
+            <div class="col-6 col-xl-3">
+                <div class="traffic-card">
+
+                    <div class="traffic-card-label">
+                        Avg. Session
+                    </div>
+
+                    <div class="traffic-card-value">
+                        {{ average_session_minutes }} min
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+
+        <!-- TRAFFIC GRAPH -->
+
+        <div class="traffic-panel">
+
+            <div class="traffic-panel-header">
+
+                <div class="d-flex justify-content-between align-items-center">
+
+                    <div>
+
+                        <div class="traffic-panel-title">
+                            Visitor Traffic
+                        </div>
+
+                        <div class="traffic-panel-subtitle">
+                            Unique visitors over time
+                        </div>
+
+                    </div>
+
+
+                    <div class="traffic-periods">
+
+                        <button
+                            type="button"
+                            class="traffic-period-btn active"
+                            onclick="changeTrafficPeriod('hourly', this)"
+                        >
+                            Hours
+                        </button>
+
+                        <button
+                            type="button"
+                            class="traffic-period-btn"
+                            onclick="changeTrafficPeriod('daily', this)"
+                        >
+                            Days
+                        </button>
+
+                        <button
+                            type="button"
+                            class="traffic-period-btn"
+                            onclick="changeTrafficPeriod('monthly', this)"
+                        >
+                            Months
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="traffic-panel-body">
+
+                <div class="traffic-chart">
+
+                    <canvas
+                        id="trafficTrendChart"
+                    ></canvas>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         PRODUCTS
+    ===================================================== -->
+
+    <div
+        id="traffic-products"
+        class="traffic-section"
+    >
+
+        <div class="traffic-panel">
+
+            <div class="traffic-panel-header">
+
+                <div class="traffic-panel-title">
+                    Most Viewed Products
+                </div>
+
+                <div class="traffic-panel-subtitle">
+                    Product views and unique visitors
+                </div>
+
+            </div>
+
+
+            {% if top_products %}
+
+                <div class="traffic-table-wrap">
+
+                    <table class="traffic-table">
+
+                        <thead>
+
+                            <tr>
+
+                                <th>
+                                    Product
+                                </th>
+
+                                <th>
+                                    Views
+                                </th>
+
+                                <th>
+                                    Unique Visitors
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+                            {% for product in top_products %}
+
+                                <tr>
+
+                                    <td>
+
+                                        <div class="traffic-entity">
+
+                                            {% if product.image_id %}
+
+                                                <img
+                                                    src="{{ url_for(
+                                                        'main.product_image',
+                                                        image_id=product.image_id
+                                                    ) }}"
+                                                    class="traffic-entity-image"
+                                                    alt="{{ product.name }}"
+                                                >
+
+                                            {% else %}
+
+                                                <div class="traffic-entity-image
+                                                            d-flex
+                                                            align-items-center
+                                                            justify-content-center">
+                                                    🛍
+                                                </div>
+
+                                            {% endif %}
+
+
+                                            <div class="traffic-entity-name">
+                                                {{ product.name }}
+                                            </div>
+
+                                        </div>
+
+                                    </td>
+
+
+                                    <td class="traffic-count">
+                                        {{ product.views }}
+                                    </td>
+
+
+                                    <td class="traffic-count">
+                                        {{ product.unique_visitors }}
+                                    </td>
+
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            {% else %}
+
+                <div class="traffic-empty">
+                    No product views recorded yet.
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         CATEGORIES
+    ===================================================== -->
+
+    <div
+        id="traffic-categories"
+        class="traffic-section"
+    >
+
+        <div class="traffic-panel">
+
+            <div class="traffic-panel-header">
+
+                <div class="traffic-panel-title">
+                    Category Traffic
+                </div>
+
+                <div class="traffic-panel-subtitle">
+                    Category views and unique visitors
+                </div>
+
+            </div>
+
+
+            {% if category_traffic %}
+
+                <div class="traffic-table-wrap">
+
+                    <table class="traffic-table">
+
+                        <thead>
+
+                            <tr>
+
+                                <th>
+                                    Category
+                                </th>
+
+                                <th>
+                                    Views
+                                </th>
+
+                                <th>
+                                    Unique Visitors
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+                            {% for category in category_traffic %}
+
+                                <tr>
+
+                                    <td>
+
+                                        <div class="traffic-entity">
+
+                                            {% if category.image_url %}
+
+    <img
+        src="{{ category.image_url }}"
+        class="traffic-entity-image"
+        alt="{{ category.name }}"
+    >
+
+{% else %}
+
+                                                <div class="traffic-entity-image
+                                                            d-flex
+                                                            align-items-center
+                                                            justify-content-center">
+                                                    🗂
+                                                </div>
+
+                                            {% endif %}
+
+
+                                            <div class="traffic-entity-name">
+                                                {{ category.name }}
+                                            </div>
+
+                                        </div>
+
+                                    </td>
+
+
+                                    <td class="traffic-count">
+                                        {{ category.views }}
+                                    </td>
+
+
+                                    <td class="traffic-count">
+                                        {{ category.unique_visitors }}
+                                    </td>
+
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            {% else %}
+
+                <div class="traffic-empty">
+                    No category views recorded yet.
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         SUBCATEGORIES
+    ===================================================== -->
+
+    <div
+        id="traffic-subcategories"
+        class="traffic-section"
+    >
+
+        <div class="traffic-panel">
+
+            <div class="traffic-panel-header">
+
+                <div class="traffic-panel-title">
+                    Subcategory Traffic
+                </div>
+
+                <div class="traffic-panel-subtitle">
+                    Subcategory views and unique visitors
+                </div>
+
+            </div>
+
+
+            {% if subcategory_traffic %}
+
+                <div class="traffic-table-wrap">
+
+                    <table class="traffic-table">
+
+                        <thead>
+
+                            <tr>
+
+                                <th>
+                                    Subcategory
+                                </th>
+
+                                <th>
+                                    Category
+                                </th>
+
+                                <th>
+                                    Views
+                                </th>
+
+                                <th>
+                                    Unique Visitors
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+                            {% for subcategory in subcategory_traffic %}
+
+                                <tr>
+
+                                    <td>
+
+                                        <div class="traffic-entity">
+
+                                            {% if subcategory.image_url %}
+
+    <img
+        src="{{ subcategory.image_url }}"
+        class="traffic-entity-image"
+        alt="{{ subcategory.name }}"
+    >
+
+{% else %}
+
+                                                <div class="traffic-entity-image
+                                                            d-flex
+                                                            align-items-center
+                                                            justify-content-center">
+                                                    📁
+                                                </div>
+
+                                            {% endif %}
+
+
+                                            <div class="traffic-entity-name">
+                                                {{ subcategory.name }}
+                                            </div>
+
+                                        </div>
+
+                                    </td>
+
+
+                                    <td>
+                                        {{ subcategory.category_name }}
+                                    </td>
+
+
+                                    <td class="traffic-count">
+                                        {{ subcategory.views }}
+                                    </td>
+
+
+                                    <td class="traffic-count">
+                                        {{ subcategory.unique_visitors }}
+                                    </td>
+
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            {% else %}
+
+                <div class="traffic-empty">
+                    No subcategory views recorded yet.
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         VISITORS
+    ===================================================== -->
+
+    <div
+        id="traffic-visitors"
+        class="traffic-section"
+    >
+
+        <div class="row g-3">
+
+
+            <!-- VISITOR TYPE -->
+
+            <div class="col-lg-5">
+
+                <div class="traffic-panel">
+
+                    <div class="traffic-panel-header">
+
+                        <div class="traffic-panel-title">
+                            Visitor Type
+                        </div>
+
+                        <div class="traffic-panel-subtitle">
+                            Logged-in vs guest visitors
+                        </div>
+
+                    </div>
+
+
+                    <div class="traffic-panel-body">
+
+                        <div class="traffic-small-chart">
+
+                            <canvas
+                                id="visitorTypeChart"
+                            ></canvas>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- PEAK HOURS -->
+
+            <div class="col-lg-7">
+
+                <div class="traffic-panel">
+
+                    <div class="traffic-panel-header">
+
+                        <div class="traffic-panel-title">
+                            Peak Hours
+                        </div>
+
+                        <div class="traffic-panel-subtitle">
+                            Unique visitors by hour
+                        </div>
+
+                    </div>
+
+
+                    <div class="traffic-panel-body">
+
+                        <div class="traffic-small-chart">
+
+                            <canvas
+                                id="peakHoursChart"
+                            ></canvas>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     CHART.JS
+     
+     Loaded only on this page.
+     No admin base/customer page changes required.
+========================================================= -->
+
+<script
+    src="https://cdn.jsdelivr.net/npm/chart.js"
+></script>
+
+
+<script>
+
+const trafficData = {
+
+    hourly: {
+        labels: {{ hourly_labels | tojson }},
+        values: {{ hourly_values | tojson }}
+    },
+
+    daily: {
+        labels: {{ daily_labels | tojson }},
+        values: {{ daily_values | tojson }}
+    },
+
+    monthly: {
+        labels: {{ monthly_labels | tojson }},
+        values: {{ monthly_values | tojson }}
+    },
+
+    visitorTypes: {
+        labels: {{ visitor_type_labels | tojson }},
+        values: {{ visitor_type_values | tojson }}
+    }
+
+};
+
+
+let trafficTrendChart = null;
+let visitorTypeChart = null;
+let peakHoursChart = null;
+
+
+/* =========================================================
+   TAB SWITCHING
+========================================================= */
+
+function showTrafficSection(
+    section,
+    button
+) {
+
+    document
+        .querySelectorAll(
+            ".traffic-main-tab"
+        )
+        .forEach(
+            function (tab) {
+
+                tab.classList.remove(
+                    "active"
+                );
+
+            }
+        );
+
+
+    document
+        .querySelectorAll(
+            ".traffic-section"
+        )
+        .forEach(
+            function (item) {
+
+                item.classList.remove(
+                    "active"
+                );
+
+            }
+        );
+
+
+    button.classList.add(
+        "active"
+    );
+
+
+    const selected =
+        document.getElementById(
+            "traffic-" + section
+        );
+
+
+    if (selected) {
+
+        selected.classList.add(
+            "active"
+        );
+
+    }
+
+
+    if (section === "visitors") {
+
+        createVisitorCharts();
+
+    }
+
+}
+
+
+/* =========================================================
+   TRAFFIC TREND
+========================================================= */
+
+function createTrafficTrendChart(
+    period
+) {
+
+    const canvas =
+        document.getElementById(
+            "trafficTrendChart"
+        );
+
+
+    if (!canvas) {
+        return;
+    }
+
+
+    if (trafficTrendChart) {
+
+        trafficTrendChart.destroy();
+
+    }
+
+
+    const data =
+        trafficData[period];
+
+
+    trafficTrendChart =
+        new Chart(
+            canvas,
+            {
+
+                type: "line",
+
+                data: {
+
+                    labels:
+                        data.labels,
+
+                    datasets: [
+
+                        {
+
+                            label:
+                                "Unique Visitors",
+
+                            data:
+                                data.values,
+
+                            tension: 0.3,
+
+                            fill: true,
+
+                            borderWidth: 2
+
+                        }
+
+                    ]
+
+                },
+
+                options: {
+
+                    responsive: true,
+
+                    maintainAspectRatio: false,
+
+                    interaction: {
+
+                        intersect: false,
+
+                        mode: "index"
+
+                    },
+
+                    plugins: {
+
+                        legend: {
+                            display: false
+                        }
+
+                    },
+
+                    scales: {
+
+                        y: {
+
+                            beginAtZero: true,
+
+                            ticks: {
+                                precision: 0
+                            }
+
+                        }
+
+                    }
+
+                }
+
+            }
+        );
+
+}
+
+
+/* =========================================================
+   PERIOD SWITCH
+========================================================= */
+
+function changeTrafficPeriod(
+    period,
+    button
+) {
+
+    document
+        .querySelectorAll(
+            ".traffic-period-btn"
+        )
+        .forEach(
+            function (item) {
+
+                item.classList.remove(
+                    "active"
+                );
+
+            }
+        );
+
+
+    button.classList.add(
+        "active"
+    );
+
+
+    createTrafficTrendChart(
+        period
+    );
+
+}
+
+
+/* =========================================================
+   VISITOR CHARTS
+========================================================= */
+
+function createVisitorCharts() {
+
+    const visitorCanvas =
+        document.getElementById(
+            "visitorTypeChart"
+        );
+
+
+    if (
+        visitorCanvas &&
+        !visitorTypeChart
+    ) {
+
+        visitorTypeChart =
+            new Chart(
+                visitorCanvas,
+                {
+
+                    type: "doughnut",
+
+                    data: {
+
+                        labels:
+                            trafficData.visitorTypes.labels,
+
+                        datasets: [
+
+                            {
+
+                                data:
+                                    trafficData.visitorTypes.values,
+
+                                borderWidth: 1
+
+                            }
+
+                        ]
+
+                    },
+
+                    options: {
+
+                        responsive: true,
+
+                        maintainAspectRatio: false,
+
+                        plugins: {
+
+                            legend: {
+
+                                position:
+                                    "bottom"
+
+                            }
+
+                        }
+
+                    }
+
+                }
+            );
+
+    }
+
+
+    const peakCanvas =
+        document.getElementById(
+            "peakHoursChart"
+        );
+
+
+    if (
+        peakCanvas &&
+        !peakHoursChart
+    ) {
+
+        peakHoursChart =
+            new Chart(
+                peakCanvas,
+                {
+
+                    type: "bar",
+
+                    data: {
+
+                        labels:
+                            trafficData.hourly.labels,
+
+                        datasets: [
+
+                            {
+
+                                label:
+                                    "Unique Visitors",
+
+                                data:
+                                    trafficData.hourly.values,
+
+                                borderWidth: 1
+
+                            }
+
+                        ]
+
+                    },
+
+                    options: {
+
+                        responsive: true,
+
+                        maintainAspectRatio: false,
+
+                        plugins: {
+
+                            legend: {
+                                display: false
+                            }
+
+                        },
+
+                        scales: {
+
+                            y: {
+
+                                beginAtZero: true,
+
+                                ticks: {
+                                    precision: 0
+                                }
+
+                            }
+
+                        }
+
+                    }
+
+                }
+            );
+
+    }
+
+}
+
+
+/* =========================================================
+   INITIAL LOAD
+========================================================= */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+        createTrafficTrendChart(
+            "hourly"
+        );
+
+    }
+);
+
+</script>
+
+{% endblock %}

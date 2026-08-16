@@ -8,48 +8,47 @@ ShopEase | Products
 
 {% block content %}
 
-<section class="py-5 products-page-section">
+<section class="py-4 products-page-section">
 
-    <div class="container">
+    <div class="container-fluid px-4">
 
         <!-- =================================================
              MAIN PRODUCTS LAYOUT
         ================================================== -->
 
-        <div class="row g-4">
+        <div class="row g-3">
 
 
             <!-- =================================================
-                 LEFT SIDE
-                 CATEGORY INFORMATION + FILTER
+                 LEFT SIDE - FILTER SIDEBAR
             ================================================== -->
 
-            <div class="col-12 col-lg-4">
+            <div class="col-12 col-lg-3">
 
 
                 <!-- =================================================
                      CATEGORY INFORMATION
                 ================================================== -->
 
-                <div class="product-listing-header mb-4">
+                <div class="product-listing-header mb-3">
 
                     {% if category %}
 
-                        <h1 class="fw-bold">
+                        <h1 class="fw-bold fs-3 mb-0">
                             {{ category.name }}
                         </h1>
 
-                        <p class="text-muted mb-0">
+                        <p class="text-muted small mb-0">
                             Explore products in {{ category.name }}.
                         </p>
 
                     {% else %}
 
-                        <h1 class="fw-bold">
+                        <h1 class="fw-bold fs-3 mb-0">
                             All Products
                         </h1>
 
-                        <p class="text-muted mb-0">
+                        <p class="text-muted small mb-0">
                             Browse our available products.
                         </p>
 
@@ -68,10 +67,10 @@ ShopEase | Products
                         class="d-flex
                                justify-content-between
                                align-items-center
-                               mb-3"
+                               mb-2"
                     >
 
-                        <h5 class="fw-bold mb-0">
+                        <h5 class="fw-bold mb-0 fs-6">
                             Filters
                         </h5>
 
@@ -103,7 +102,7 @@ ShopEase | Products
                         <div class="filter-section">
 
                             <label
-                                class="filter-title"
+                                class="filter-title small fw-bold"
                             >
                                 Category
                             </label>
@@ -111,7 +110,7 @@ ShopEase | Products
 
                             <select
                                 name="category"
-                                class="form-select"
+                                class="form-select form-select-sm"
                                 onchange="this.form.submit()"
                             >
 
@@ -147,7 +146,7 @@ ShopEase | Products
                         <div class="filter-section">
 
                             <label
-                                class="filter-title"
+                                class="filter-title small fw-bold"
                             >
                                 Subcategory
                             </label>
@@ -155,7 +154,7 @@ ShopEase | Products
 
                             <select
                                 name="subcategory"
-                                class="form-select"
+                                class="form-select form-select-sm"
                             >
 
                                 <option value="">
@@ -192,7 +191,7 @@ ShopEase | Products
                             <div class="filter-section">
 
                                 <label
-                                    class="filter-title"
+                                    class="filter-title small fw-bold"
                                 >
                                     Brand
                                 </label>
@@ -203,7 +202,7 @@ ShopEase | Products
                                     {% for brand in brands %}
 
                                         <label
-                                            class="filter-option"
+                                            class="filter-option small"
                                         >
 
                                             <input
@@ -238,20 +237,20 @@ ShopEase | Products
                         <div class="filter-section">
 
                             <label
-                                class="filter-title"
+                                class="filter-title small fw-bold"
                             >
                                 Price
                             </label>
 
 
-                            <div class="row g-2">
+                            <div class="row g-1">
 
                                 <div class="col-6">
 
                                     <input
                                         type="number"
                                         name="min_price"
-                                        class="form-control"
+                                        class="form-control form-control-sm"
                                         placeholder="Min"
                                         min="0"
                                         value="{% if min_price is not none %}{{ min_price }}{% endif %}"
@@ -265,7 +264,7 @@ ShopEase | Products
                                     <input
                                         type="number"
                                         name="max_price"
-                                        class="form-control"
+                                        class="form-control form-control-sm"
                                         placeholder="Max"
                                         min="0"
                                         value="{% if max_price is not none %}{{ max_price }}{% endif %}"
@@ -287,7 +286,7 @@ ShopEase | Products
                             <div class="filter-section">
 
                                 <label
-                                    class="filter-title"
+                                    class="filter-title small fw-bold"
                                 >
                                     Size / Variant
                                 </label>
@@ -298,7 +297,7 @@ ShopEase | Products
                                     {% for size in sizes %}
 
                                         <label
-                                            class="filter-option"
+                                            class="filter-option small"
                                         >
 
                                             <input
@@ -333,14 +332,14 @@ ShopEase | Products
                         <div class="filter-section">
 
                             <label
-                                class="filter-title"
+                                class="filter-title small fw-bold"
                             >
                                 Availability
                             </label>
 
 
                             <label
-                                class="filter-option"
+                                class="filter-option small"
                             >
 
                                 <input
@@ -368,7 +367,7 @@ ShopEase | Products
 
                         <button
                             type="submit"
-                            class="btn btn-primary w-100"
+                            class="btn btn-primary w-100 btn-sm"
                         >
                             Apply Filters
                         </button>
@@ -381,11 +380,10 @@ ShopEase | Products
 
 
             <!-- =================================================
-                 RIGHT SIDE
-                 SUBCATEGORIES + PRODUCTS
+                 RIGHT SIDE - SUBCATEGORIES + PRODUCTS
             ================================================== -->
 
-            <div class="col-12 col-lg-8">
+            <div class="col-12 col-lg-9">
 
 
                 <!-- =================================================
@@ -394,9 +392,9 @@ ShopEase | Products
 
                 {% if subcategories %}
 
-                    <div class="mb-4">
+                    <div class="mb-3">
 
-                        <h5 class="fw-semibold mb-3">
+                        <h5 class="fw-semibold mb-2 fs-6">
                             Shop by Subcategory
                         </h5>
 
@@ -430,7 +428,7 @@ ShopEase | Products
                                         <div
                                             class="subcategory-card-body"
                                         >
-                                            <h6>
+                                            <h6 class="fs-6">
                                                 All Products
                                             </h6>
                                         </div>
@@ -493,7 +491,7 @@ ShopEase | Products
                                             class="subcategory-card-body"
                                         >
 
-                                            <h6>
+                                            <h6 class="fs-6">
                                                 {{ subcategory.name }}
                                             </h6>
 
@@ -524,7 +522,7 @@ ShopEase | Products
                            product-result-header"
                 >
 
-                    <div class="product-result-count">
+                    <div class="product-result-count small">
 
                         <strong>
                             {{ products|length }}
@@ -622,7 +620,7 @@ ShopEase | Products
 
                         <label
                             for="sort"
-                            class="small text-muted"
+                            class="small text-muted mb-0"
                         >
                             Sort:
                         </label>
@@ -632,6 +630,7 @@ ShopEase | Products
                             id="sort"
                             name="sort"
                             class="form-select form-select-sm"
+                            style="width:auto;"
                             onchange="this.form.submit()"
                         >
 
@@ -693,12 +692,12 @@ ShopEase | Products
 
                 {% if products %}
 
-                    <div class="row g-4">
+                    <div class="row g-3">
 
                         {% for product in products %}
 
                             <div
-                                class="col-6 col-md-6 col-xl-4"
+                                class="col-6 col-md-4 col-xl-3"
                             >
 
                                 <a

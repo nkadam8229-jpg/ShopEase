@@ -78,17 +78,9 @@ def home():
 
         storage = StorageService()
 
-        banner_path = storage.get_path(
-            banner.image_key
-        )
-
-        if (
-            not banner_path
-            or not banner_path.exists()
-        ):
+        if not storage.exists(banner.image_key):
 
             banner = None
-
 
     # -------------------------------------------------
     # ACTIVE CATEGORIES
@@ -149,21 +141,18 @@ def category_image(category_id):
 
         abort(404)
 
-
     storage = StorageService()
 
-    image_path = storage.get_path(
+    if not storage.exists(category.image_key):
+        abort(404)
+
+    image_file = storage.get_file(
         category.image_key
     )
 
-
-    if not image_path or not image_path.exists():
-
-        abort(404)
-
-
     return send_file(
-        image_path
+        image_file,
+        mimetype="image/webp"
     )
 
 # =========================================================
@@ -185,22 +174,20 @@ def subcategory_image(subcategory_id):
 
         abort(404)
 
-
     storage = StorageService()
 
-    image_path = storage.get_path(
+    if not storage.exists(subcategory.image_key):
+        abort(404)
+
+    image_file = storage.get_file(
         subcategory.image_key
     )
 
-
-    if not image_path or not image_path.exists():
-
-        abort(404)
-
-
     return send_file(
-        image_path
+        image_file,
+        mimetype="image/webp"
     )
+
 # =========================================================
 # PRODUCT IMAGE
 # =========================================================
@@ -222,23 +209,19 @@ def product_image(image_id):
 
         abort(404)
 
-
     storage = StorageService()
 
-    image_path = storage.get_path(
+    if not storage.exists(product_image.image_key):
+        abort(404)
+
+    image_file = storage.get_file(
         product_image.image_key
     )
 
-
-    if not image_path or not image_path.exists():
-
-        abort(404)
-
-
     return send_file(
-        image_path
+        image_file,
+        mimetype="image/webp"
     )
-
 
 # =========================================================
 # BANNER IMAGE
@@ -257,16 +240,16 @@ def banner_image(banner_id):
 
     if banner.image_key:
 
-        image_path = storage.get_path(
-            banner.image_key
-        )
+        if storage.exists(banner.image_key):
 
-        if image_path and image_path.exists():
-
-            return send_file(
-                image_path
+            image_file = storage.get_file(
+                banner.image_key
             )
 
+            return send_file(
+                image_file,
+                mimetype="image/webp"
+            )
     # -------------------------------------------------
     # FALLBACK TO DEFAULT BANNER
     # -------------------------------------------------
@@ -1050,7 +1033,7 @@ def products():
 # =========================================================
 
 @main_bp.route(
-    "/products/<string:slug>"
+    "/products/<path:slug>"
 )
 def product_detail(slug):
 

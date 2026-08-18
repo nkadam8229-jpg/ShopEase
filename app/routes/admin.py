@@ -791,21 +791,23 @@ def subcategory_image(subcategory_id):
     if not subcategory or not subcategory.image_key:
         return "", 404
 
+
     storage = StorageService()
 
-    image_path = storage.get_path(
+    if not storage.exists(subcategory.image_key):
+        return "", 404
+
+    image_file = storage.get_file(
         subcategory.image_key
     )
-
-    if not image_path or not image_path.exists():
-        return "", 404
 
     from flask import send_file
 
     return send_file(
-        image_path,
+        image_file,
         mimetype="image/webp"
     )
+
 # =========================================================
 # EDIT SUBCATEGORY
 # =========================================================
@@ -1635,20 +1637,19 @@ def category_image(category_id):
 
     storage = StorageService()
 
-    image_path = storage.get_path(
+    if not storage.exists(category.image_key):
+        return "", 404
+
+    image_file = storage.get_file(
         category.image_key
     )
-
-    if not image_path or not image_path.exists():
-        return "", 404
 
     from flask import send_file
 
     return send_file(
-        image_path,
+        image_file,
         mimetype="image/webp"
     )
-
 
 # =========================================================
 # BRAND IMAGE
@@ -1670,17 +1671,17 @@ def brand_image(brand_id):
 
     storage = StorageService()
 
-    image_path = storage.get_path(
+    if not storage.exists(brand.logo_key):
+        return "", 404
+
+    image_file = storage.get_file(
         brand.logo_key
     )
-
-    if not image_path or not image_path.exists():
-        return "", 404
 
     from flask import send_file
 
     return send_file(
-        image_path,
+        image_file,
         mimetype="image/webp"
     )
 
@@ -3002,19 +3003,19 @@ def product_image_view(
 
     storage = StorageService()
 
-    image_path = storage.get_path(
+    if not storage.exists(image.image_key):
+        return "", 404
+
+    image_file = storage.get_file(
         image.image_key
     )
-
-    if not image_path or not image_path.exists():
-
-        return "", 404
 
     from flask import send_file
 
     return send_file(
-    image_path
-)
+        image_file,
+        mimetype="image/webp"
+    )
 # =========================================================
 # SET PRIMARY PRODUCT IMAGE
 # =========================================================
@@ -6666,20 +6667,16 @@ def banner_image(banner_id):
 
     storage = StorageService()
 
-    image_path = storage.get_path(
+    if not storage.exists(banner.image_key):
+        return "", 404
+
+    image_file = storage.get_file(
         banner.image_key
     )
-
-    if (
-        not image_path
-        or not image_path.exists()
-    ):
-
-        return "", 404
 
     from flask import send_file
 
     return send_file(
-        image_path,
+        image_file,
         mimetype="image/webp"
     )

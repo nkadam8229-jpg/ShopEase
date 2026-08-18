@@ -30,4 +30,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
 
+    from app.services.order_lifecycle import start_order_lifecycle_worker
+    start_order_lifecycle_worker(app)
+
     return app

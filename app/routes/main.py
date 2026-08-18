@@ -1050,7 +1050,7 @@ def products():
 # =========================================================
 
 @main_bp.route(
-    "/products/<string:slug>"
+    "/products/<path:slug>"
 )
 def product_detail(slug):
 

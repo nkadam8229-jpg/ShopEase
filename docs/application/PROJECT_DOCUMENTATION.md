@@ -1,6 +1,14 @@
-Yes. Below is the **same complete document with the wording unchanged**. I am only changing the formatting of the wide diagrams/code blocks so the document is more GitHub-friendly and avoids unnecessary horizontal scrolling.
+Absolutely. This time I will keep it **strictly GitHub-safe**:
 
-Copy the entire block into:
+* **No Mermaid**
+* **No tables**
+* **No ASCII diagrams**
+* **No wide code blocks**
+* Only headings, paragraphs, bullets, numbered lists, and short commands
+* The document will wrap naturally and should not create horizontal scrolling.
+* I am keeping the **content/wording from the previous version**, only replacing the problematic diagram formatting with normal Markdown.
+
+Copy this entire content into:
 
 `docs/application/PROJECT_DOCUMENTATION.md`
 
@@ -85,58 +93,61 @@ The main objectives of ShopEase are:
 
 ShopEase follows a modular Flask application structure.
 
-```mermaid
-flowchart TD
-    A[ShopEase] --> B[Routes]
-    A --> C[Services]
-    A --> D[Models]
-    B --> E[Customer / Admin]
-    C --> F[Business / Storage Logic]
-    D --> G[SQLAlchemy Models]
-    G --> H[MySQL]
-    C --> I[Amazon S3]
-````
+### Main Application Components
 
-### Routes
+- **Routes**
+  - Receive requests from customers and administrators.
+  - Control the application workflows.
+  - Connect user actions with the required application logic.
 
-Routes receive requests and control the customer and administrator workflows.
+- **Services**
+  - Contain reusable application logic.
+  - Handle image processing, storage, uploads, and order lifecycle processing.
 
-### Services
+- **Models**
+  - Represent the application's database entities.
+  - Define the relationships between different types of application data.
 
-Services contain reusable application logic such as image processing, file storage, upload handling, and order lifecycle processing.
+- **MySQL**
+  - Stores structured application data.
+  - Stores information such as users, products, carts, wishlists, addresses, and orders.
 
-### Models
+- **Amazon S3**
+  - Stores application image files in the RDS + S3 version.
+  - The storage layer handles communication between the application and S3.
 
-SQLAlchemy models represent the application's database entities and relationships.
+### Application Flow
 
-### Database
+A normal application request follows this general flow:
 
-MySQL stores the application's structured data such as users, products, carts, wishlists, addresses, and orders.
-
-### Image Storage
-
-Product and other uploaded images are processed before being stored. In the RDS + S3 version, the actual image files are stored in Amazon S3 while the application keeps the required storage reference/key.
+1. A customer or administrator performs an action.
+2. The request reaches the appropriate Flask route.
+3. The route performs the required application logic.
+4. Services are used when reusable or specialized processing is required.
+5. Database models communicate with MySQL when structured data is required.
+6. The storage service communicates with the configured storage backend when files or images are required.
+7. The result is returned to the customer or administrator.
 
 ---
 
-# 6. Customer Workflow
+## 6. Customer Workflow
 
 The main customer workflow is:
 
-```mermaid
-flowchart TD
-    A[Register] --> B[Login]
-    B --> C[Browse Products]
-    C --> D[Search / Filter / Sort]
-    D --> E[Product Details]
-    E --> F[Wishlist / Add to Cart]
-    F --> G[Cart]
-    G --> H[Address]
-    H --> I[Checkout]
-    I --> J[Place Order]
-    J --> K[Order Confirmation]
-    K --> L[Order Lifecycle / Status]
-```
+1. Register an account.
+2. Log in.
+3. Browse products.
+4. Search, filter, or sort products.
+5. Open product details.
+6. Add products to the wishlist or cart.
+7. Manage the shopping cart.
+8. Select or manage an address.
+9. Proceed to checkout.
+10. Place the order.
+11. View order confirmation.
+12. Follow the order lifecycle and status.
+
+---
 
 ## 6.1 Registration
 
@@ -144,9 +155,13 @@ A new customer can create an account using the registration page.
 
 The application validates the registration information and stores the customer account in the database. Passwords are stored using hashing rather than storing the original password.
 
+---
+
 ## 6.2 Login
 
 Customers can log in using their registered credentials. Successful authentication creates the customer session used by protected customer functionality.
+
+---
 
 ## 6.3 Product Browsing
 
@@ -154,14 +169,16 @@ Customers can browse products through the home page, categories and product list
 
 The product listing functionality supports:
 
-* Search
-* Category filtering
-* Subcategory filtering
-* Brand filtering
-* Size filtering
-* Price filtering
-* Availability filtering
-* Sorting
+- Search
+- Category filtering
+- Subcategory filtering
+- Brand filtering
+- Size filtering
+- Price filtering
+- Availability filtering
+- Sorting
+
+---
 
 ## 6.4 Product Details
 
@@ -169,11 +186,15 @@ The product detail page displays information about an individual product, includ
 
 Customers can use the product detail page to select the required options and add the product to their cart or wishlist.
 
+---
+
 ## 6.5 Wishlist
 
 Customers can add products to a wishlist for later use.
 
 They can view their wishlist and remove products when required.
+
+---
 
 ## 6.6 Cart
 
@@ -181,11 +202,15 @@ Customers can add products to the shopping cart, change quantities, and remove i
 
 The cart calculates the information required before checkout.
 
+---
+
 ## 6.7 Checkout
 
 The checkout process collects the required order and address information and prepares the order for placement.
 
 The current application does not depend on a real external payment gateway.
+
+---
 
 ## 6.8 Order Placement
 
@@ -193,16 +218,18 @@ After checkout, the application creates the order and its related order items in
 
 The customer receives an order confirmation and can view the order status.
 
+---
+
 ## 6.9 Order Lifecycle
 
-ShopEase uses a controlled simulated delivery lifecycle:
+ShopEase uses a controlled simulated delivery lifecycle.
 
-```mermaid
-flowchart TD
-    A[PENDING] --> B[CONFIRMED]
-    B --> C[SHIPPED]
-    C --> D[DELIVERED]
-```
+The order progresses through the following statuses:
+
+1. **PENDING**
+2. **CONFIRMED**
+3. **SHIPPED**
+4. **DELIVERED**
 
 The application automatically progresses eligible orders based on elapsed time.
 
@@ -214,20 +241,22 @@ This allows the complete order workflow to be demonstrated and tested without re
 
 The administrator has a separate management interface.
 
-```mermaid
-flowchart TD
-    A[Admin Login] --> B[Admin Dashboard]
-    B --> C[Products]
-    B --> D[Categories]
-    B --> E[Subcategories]
-    B --> F[Brands]
-    B --> G[Product Images]
-    B --> H[Users]
-    B --> I[Orders]
-    B --> J[Revenue]
-    B --> K[Traffic]
-    B --> L[Banners]
-```
+The main administrator workflow is:
+
+1. Admin Login
+2. Admin Dashboard
+3. Product Management
+4. Category Management
+5. Subcategory Management
+6. Brand Management
+7. Product Image Management
+8. User Management
+9. Order Management
+10. Revenue Information
+11. Traffic Information
+12. Banner Management
+
+---
 
 ## 7.1 Admin Authentication
 
@@ -235,21 +264,27 @@ Administrators use a separate admin login system.
 
 The admin area is protected so normal customers cannot directly access administrative functionality.
 
+---
+
 ## 7.2 Product Management
 
 Administrators can manage products and their related information.
 
 This includes product information, variants/sizes, product images, and the primary product image.
 
+---
+
 ## 7.3 Category Management
 
 Administrators can create and manage:
 
-* Categories
-* Subcategories
-* Brands
+- Categories
+- Subcategories
+- Brands
 
 These are used to organize the product catalog.
+
+---
 
 ## 7.4 Image Management
 
@@ -257,9 +292,13 @@ Administrators can upload and manage product images.
 
 Images are processed before storage, and the storage layer determines where the processed image is saved.
 
+---
+
 ## 7.5 User Management
 
 Administrators can view users and user details and manage user account status.
+
+---
 
 ## 7.6 Order Management
 
@@ -267,9 +306,13 @@ Administrators can view and manage customer orders.
 
 This allows the administrator to monitor the order side of the application.
 
+---
+
 ## 7.7 Revenue and Traffic
 
 The admin interface provides revenue and traffic-related information for monitoring the application's activity.
+
+---
 
 ## 7.8 Banner Management
 
@@ -279,40 +322,40 @@ Administrators can manage the banners displayed by the application.
 
 # 8. Main Application Features
 
-### Customer Features
+## Customer Features
 
-* Customer registration and login
-* Product browsing
-* Product search
-* Product filtering
-* Product sorting
-* Product details
-* Wishlist
-* Shopping cart
-* Address management
-* Checkout
-* Order placement
-* Order confirmation
-* Order lifecycle tracking
-* Customer profile
-* Password change
-* Traffic tracking
+- Customer registration and login
+- Product browsing
+- Product search
+- Product filtering
+- Product sorting
+- Product details
+- Wishlist
+- Shopping cart
+- Address management
+- Checkout
+- Order placement
+- Order confirmation
+- Order lifecycle tracking
+- Customer profile
+- Password change
+- Traffic tracking
 
-### Admin Features
+## Admin Features
 
-* Admin login
-* Dashboard
-* Product management
-* Category management
-* Subcategory management
-* Brand management
-* Product variant/size management
-* Product image management
-* User management
-* Order management
-* Revenue information
-* Traffic information
-* Banner management
+- Admin login
+- Dashboard
+- Product management
+- Category management
+- Subcategory management
+- Brand management
+- Product variant/size management
+- Product image management
+- User management
+- Order management
+- Revenue information
+- Traffic information
+- Banner management
 
 ---
 
@@ -324,33 +367,33 @@ SQLAlchemy models are used by the Flask application to communicate with the data
 
 The main database entities include:
 
-* `User`
-* `Admin`
-* `Category`
-* `Subcategory`
-* `Brand`
-* `Product`
-* `ProductSize`
-* `ProductImage`
-* `Banner`
-* `CartItem`
-* `WishlistItem`
-* `Address`
-* `Order`
-* `OrderItem`
-* `TrafficEvent`
+- `User`
+- `Admin`
+- `Category`
+- `Subcategory`
+- `Brand`
+- `Product`
+- `ProductSize`
+- `ProductImage`
+- `Banner`
+- `CartItem`
+- `WishlistItem`
+- `Address`
+- `Order`
+- `OrderItem`
+- `TrafficEvent`
 
-### Important relationships
+## Important Relationships
 
-* A category can contain multiple subcategories.
-* Products belong to the appropriate catalog structure.
-* Products can have multiple sizes/variants.
-* Products can have multiple images.
-* A customer can have wishlist items and cart items.
-* A customer can have saved addresses.
-* An order belongs to a customer.
-* An order can contain multiple order items.
-* Traffic events store application activity used by the traffic-related functionality.
+- A category can contain multiple subcategories.
+- Products belong to the appropriate catalog structure.
+- Products can have multiple sizes/variants.
+- Products can have multiple images.
+- A customer can have wishlist items and cart items.
+- A customer can have saved addresses.
+- An order belongs to a customer.
+- An order can contain multiple order items.
+- Traffic events store application activity used by the traffic-related functionality.
 
 The database stores **structured application information**. Product image files themselves are handled by the storage layer.
 
@@ -360,17 +403,15 @@ The database stores **structured application information**. Product image files 
 
 ShopEase separates image processing from image storage.
 
-The upload flow is:
+The image upload flow is:
 
-```mermaid
-flowchart TD
-    A[Image Upload] --> B[Validation]
-    B --> C[Image Processing]
-    C --> D[Resize / Convert]
-    D --> E[Unique Filename]
-    E --> F[Storage Service]
-    F --> G[Amazon S3]
-```
+1. Image Upload
+2. Validation
+3. Image Processing
+4. Resize / Convert
+5. Unique Filename
+6. Storage Service
+7. Configured Storage Backend
 
 The image service validates uploaded images, checks the file size and type, verifies that the file is a valid image, resizes large images, and converts them to WebP format.
 
@@ -492,12 +533,10 @@ Instead, ShopEase implements a **controlled delivery simulation**.
 
 After an order is placed, the order moves through predefined statuses:
 
-```mermaid
-flowchart TD
-    A[PENDING] --> B[CONFIRMED]
-    B --> C[SHIPPED]
-    C --> D[DELIVERED]
-```
+1. **PENDING**
+2. **CONFIRMED**
+3. **SHIPPED**
+4. **DELIVERED**
 
 The order lifecycle service runs independently through a background worker and checks orders that are ready for their next status.
 
@@ -513,10 +552,10 @@ The current ShopEase application focuses on providing a complete and realistic e
 
 The following areas are intentionally simplified:
 
-* Payments are not connected to a real payment gateway.
-* Delivery is simulated rather than connected to a real logistics provider.
-* Product reviews and ratings are not currently implemented.
-* Advanced production integrations are outside the current application scope.
+- Payments are not connected to a real payment gateway.
+- Delivery is simulated rather than connected to a real logistics provider.
+- Product reviews and ratings are not currently implemented.
+- Advanced production integrations are outside the current application scope.
 
 These decisions keep the application focused on its primary purpose: providing a functional e-commerce workload for deployment, infrastructure, and performance testing.
 
@@ -526,59 +565,59 @@ These decisions keep the application focused on its primary purpose: providing a
 
 The following features can be implemented in future versions.
 
-### Real Payment Gateway
+## Real Payment Gateway
 
 Integrate a payment provider such as Razorpay or another supported payment service.
 
 Possible additions include:
 
-* Payment creation
-* Payment verification
-* Transaction records
-* Payment failure handling
-* Order/payment status synchronization
+- Payment creation
+- Payment verification
+- Transaction records
+- Payment failure handling
+- Order/payment status synchronization
 
-### Real Delivery Integration
+## Real Delivery Integration
 
 Replace the simulated lifecycle with a real courier or logistics API.
 
 Possible additions include:
 
-* Shipment creation
-* Tracking ID
-* Real-time shipment status
-* Delivery tracking
-* Delivery notifications
+- Shipment creation
+- Tracking ID
+- Real-time shipment status
+- Delivery tracking
+- Delivery notifications
 
-### Reviews and Ratings
+## Reviews and Ratings
 
 Add product reviews and ratings.
 
 Possible functionality includes:
 
-* Star ratings
-* Written reviews
-* Review moderation
-* Verified-purchase reviews
+- Star ratings
+- Written reviews
+- Review moderation
+- Verified-purchase reviews
 
-### Notifications
+## Notifications
 
 Add email or SMS notifications for events such as:
 
-* Account registration
-* Order confirmation
-* Shipment
-* Delivery
-* Payment status
+- Account registration
+- Order confirmation
+- Shipment
+- Delivery
+- Payment status
 
-### Additional E-Commerce Features
+## Additional E-Commerce Features
 
 Future versions could also include:
 
-* Coupons and discount codes
-* Advanced product recommendations
-* More detailed analytics
-* Additional customer account features
+- Coupons and discount codes
+- Advanced product recommendations
+- More detailed analytics
+- Additional customer account features
 
 ---
 
@@ -590,7 +629,7 @@ A typical local setup is:
 
 ```bash
 python -m venv venv
-```
+````
 
 Activate the virtual environment and install the dependencies:
 
@@ -602,9 +641,7 @@ Configure the required environment variables using `.env.example` as a reference
 
 Create/configure the MySQL database using:
 
-```text
-database/shopease_structure.sql
-```
+`database/shopease_structure.sql`
 
 Then start the application using:
 
@@ -626,7 +663,16 @@ The final application was tested through its customer workflows, administrative 
 
 The focus of the project is therefore not only the application itself, but also demonstrating how a functional application can be prepared for deployment across different infrastructure environments.
 
-```
+````
 
-**This version keeps the wording unchanged from the previous document; only the formatting of the diagrams and the database entity list was changed to make it more GitHub-friendly.**
-```
+### One thing to check after pasting
+
+The only fenced code blocks are now the **very short Python commands**:
+
+```text
+python -m venv venv
+pip install -r requirements.txt
+python run.py
+````
+
+Everything else is plain Markdown. **There are no Mermaid diagrams, tables, ASCII diagrams, or long code blocks**, so this version should not introduce horizontal scrolling from the document itself.

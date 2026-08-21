@@ -78,32 +78,16 @@ MySQL is used locally on the same EC2 instance for this version.
 
 ## 5. Clone the ShopEase Repository
 
-Clone the repository:
+Clone only the `local-storage` branch:
 
 ```bash
-git clone https://github.com/nkadam8229-jpg/ShopEase.git
+git clone --branch local-storage --single-branch https://github.com/nkadam8229-jpg/ShopEase.git
 cd ShopEase
 ```
 
-The repository's default branch is `main`, so switch to the local-storage branch:
+The `--branch local-storage` option directly downloads the required branch, while `--single-branch` avoids downloading the other branches.
 
-```bash
-git checkout local-storage
-```
-
-Verify:
-
-```bash
-git branch --show-current
-```
-
-Expected:
-
-```text
-local-storage
-```
-
-This step is important. The local-storage deployment must use the `local-storage` branch rather than the RDS + S3 version on `main`.
+No separate `git checkout local-storage` step is required.
 
 ---
 
@@ -528,9 +512,8 @@ sudo systemctl start mysql
 ### Clone
 
 ```bash
-git clone https://github.com/nkadam8229-jpg/ShopEase.git
+git clone --branch local-storage --single-branch https://github.com/nkadam8229-jpg/ShopEase.git
 cd ShopEase
-git checkout local-storage
 ```
 
 ### Python environment

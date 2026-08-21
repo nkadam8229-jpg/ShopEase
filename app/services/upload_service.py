@@ -10,8 +10,8 @@ def upload_image(file, folder):
 
     image_key = storage.save(
         processed_image,
-        folder,
-        filename
+        filename,
+        folder
     )
 
     return image_key

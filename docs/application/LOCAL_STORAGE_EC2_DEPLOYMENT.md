@@ -610,8 +610,216 @@ The application and database are located on the same EC2 instance in this setup.
 This setup is useful for understanding and testing the application before moving to a separated production-style architecture.
 
 ---
+Yes — I checked the **actual uploaded `ShopEase_Inventory.zip`**. The structure is:
 
-## 23. Difference from the `main` Branch
+```text
+ShopEase_Inventory/
+├── base_setup.py
+├── import_products.py
+├── requirements.txt
+└── ShopEase_Inventry_25pct/
+    ├── Brands/
+    ├── Categories/
+    ├── Electronics/
+    ├── Home-Decor/
+    ├── Mens-Clothing/
+    └── Womens-Clothing/
+```
+
+So you are correct: **there should be no `cd <INVENTORY_AUTOMATION_FOLDER>` placeholder.** The outer folder is specifically `ShopEase_Inventory`.
+
+For Linux, the ZIP can also be downloaded directly with `wget`.
+
+Here is the **corrected complete #23**, matching the actual ZIP:
+
+---
+
+# 23. Inventory Upload Automation
+
+Once Flask is started, products can be added manually through the application by creating categories, subcategories, brands, filling the product form, and uploading images.
+
+To avoid doing this manually for the complete demo inventory, an inventory automation package is provided.
+
+The automation sets up:
+
+* 4 categories
+* 20 subcategories
+* Required brands
+* 69 products
+* Product images
+
+**Approximate time:**
+
+* Base setup: ~2 minutes
+* Product import: ~15 minutes
+
+**[Download ShopEase Inventory Automation]**
+[Download ShopEase Inventory Automation](https://drive.google.com/file/d/1H6kyRdkIvpi54HEN_fhcDxTzqc296PCD/view?usp=sharing)
+
+> **Important:** The ShopEase application must already be running before starting the inventory automation.
+
+---
+
+## Windows — Recommended
+
+### 1. Download and Extract
+
+Download the inventory ZIP and extract it.
+
+The extracted folder should contain:
+
+* `requirements.txt`
+* `base_setup.py`
+* `import_products.py`
+* `ShopEase_Inventry_25pct/`
+
+The `ShopEase_Inventry_25pct` folder contains:
+
+* `Brands`
+* `Categories`
+* `Electronics`
+* `Home-Decor`
+* `Mens-Clothing`
+* `Womens-Clothing`
+
+### 2. Open Command Prompt
+
+Open the extracted **`ShopEase_Inventory`** folder in File Explorer.
+
+Stay outside the `ShopEase_Inventry_25pct` folder.
+
+Click the address bar, type:
+
+```text
+cmd
+```
+
+Press **Enter**.
+
+The Command Prompt will open directly inside the `ShopEase_Inventory` folder.
+
+### 3. Install Required Packages
+
+Verify Python and pip:
+
+```text
+python --version
+python -m pip --version
+```
+
+Install the required packages:
+
+```text
+python -m pip install -r requirements.txt
+```
+
+### 4. Run Base Setup
+
+Replace `<INVENTORY_FOLDER_PATH>` with the path of your extracted `ShopEase_Inventry_25pct` folder.
+
+```text
+python base_setup.py --inventory "<INVENTORY_FOLDER_PATH>" --base-url "http://<PUBLIC_IP>:5000"
+```
+
+**Approximate time:** ~2 minutes
+
+### 5. Import Products
+
+After the base setup finishes successfully, run:
+
+```text
+python import_products.py --inventory "<INVENTORY_FOLDER_PATH>" --base-url "http://<PUBLIC_IP>:5000"
+```
+
+**Approximate time:** ~15 minutes
+
+---
+
+## EC2 / Linux
+
+### 1. Download and Extract
+
+Download the inventory ZIP directly to the EC2 instance:
+
+```bash
+wget "https://drive.usercontent.google.com/download?id=1H6kyRdkIvpi54HEN_fhcDxTzqc296PCD&export=download&confirm=t" -O ShopEase_Inventory.zip
+```
+
+Extract it:
+
+```bash
+unzip ShopEase_Inventory.zip
+```
+
+The extracted folder will be:
+
+```text
+ShopEase_Inventory/
+```
+
+It contains:
+
+* `requirements.txt`
+* `base_setup.py`
+* `import_products.py`
+* `ShopEase_Inventry_25pct/`
+
+The `ShopEase_Inventry_25pct` folder contains:
+
+* `Brands`
+* `Categories`
+* `Electronics`
+* `Home-Decor`
+* `Mens-Clothing`
+* `Womens-Clothing`
+
+### 2. Open the Inventory Automation Folder
+
+```bash
+cd ShopEase_Inventory
+```
+
+### 3. Install Required Packages
+
+Verify Python and pip:
+
+```bash
+python3 --version
+python3 -m pip --version
+```
+
+Install the required packages:
+
+```bash
+python3 -m pip install -r requirements.txt
+```
+
+### 4. Run Base Setup
+
+Replace `<INVENTORY_FOLDER_PATH>` with the path of the extracted `ShopEase_Inventry_25pct` folder.
+
+```bash
+python3 base_setup.py --inventory "<INVENTORY_FOLDER_PATH>" --base-url "http://<PUBLIC_IP>:5000"
+```
+
+**Approximate time:** ~2 minutes
+
+### 5. Import Products
+
+After the base setup finishes successfully, run:
+
+```bash
+python3 import_products.py --inventory "<INVENTORY_FOLDER_PATH>" --base-url "http://<PUBLIC_IP>:5000"
+```
+
+**Approximate time:** ~15 minutes
+
+> Replace `<PUBLIC_IP>` with the IP address where the ShopEase Flask application is running.
+
+---
+
+
+## 24. Difference from the `main` Branch
 
 The `local-storage` branch and `main` branch contain the same core ShopEase application workflow, but they use different infrastructure/storage implementations.
 
@@ -633,7 +841,7 @@ The AWS deployment documentation will be maintained separately and should not be
 
 ---
 
-## 24. Important Security Notes
+## 25. Important Security Notes
 
 For a real deployment:
 

@@ -610,29 +610,6 @@ The application and database are located on the same EC2 instance in this setup.
 This setup is useful for understanding and testing the application before moving to a separated production-style architecture.
 
 ---
-Yes — I checked the **actual uploaded `ShopEase_Inventory.zip`**. The structure is:
-
-```text
-ShopEase_Inventory/
-├── base_setup.py
-├── import_products.py
-├── requirements.txt
-└── ShopEase_Inventry_25pct/
-    ├── Brands/
-    ├── Categories/
-    ├── Electronics/
-    ├── Home-Decor/
-    ├── Mens-Clothing/
-    └── Womens-Clothing/
-```
-
-So you are correct: **there should be no `cd <INVENTORY_AUTOMATION_FOLDER>` placeholder.** The outer folder is specifically `ShopEase_Inventory`.
-
-For Linux, the ZIP can also be downloaded directly with `wget`.
-
-Here is the **corrected complete #23**, matching the actual ZIP:
-
----
 
 # 23. Inventory Upload Automation
 

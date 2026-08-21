@@ -697,7 +697,14 @@ Replace `<INVENTORY_FOLDER_PATH>` with the path of your extracted `ShopEase_Inve
 ```text
 python base_setup.py --inventory "<INVENTORY_FOLDER_PATH>" --base-url "http://<PUBLIC_IP>:5000"
 ```
+After running the command:
 
+A browser window will open automatically.
+Log in using your ShopEase Admin credentials.
+After successful login, return to the Command Prompt.
+Press Enter to continue the automation.
+
+Important: Do not press Enter until you have successfully logged in to the Admin panel in the browser.
 **Approximate time:** ~2 minutes
 
 ### 5. Import Products
@@ -707,7 +714,14 @@ After the base setup finishes successfully, run:
 ```text
 python import_products.py --inventory "<INVENTORY_FOLDER_PATH>" --base-url "http://<PUBLIC_IP>:5000"
 ```
+After running the command:
 
+A browser window will open automatically.
+Log in using your ShopEase Admin credentials.
+After successful login, return to the Command Prompt.
+Press Enter to continue the automation.
+
+Important: Do not press Enter until you have successfully logged in to the Admin panel in the browser.
 **Approximate time:** ~15 minutes
 
 ---

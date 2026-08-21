@@ -1,11 +1,3 @@
-
----
-
-# `local-storage` branch — put this in `README.md`
-
-Use this version on the `local-storage` branch:
-
-```markdown
 # ShopEase
 
 ShopEase is a deployment-focused e-commerce application developed as the
@@ -20,24 +12,55 @@ order placement, order lifecycle management, and administration.
 The application was built to provide a realistic workload for experimenting
 with and documenting different deployment and infrastructure approaches.
 
-This branch provides the local-storage version of ShopEase for local
-development, testing, and EC2 deployment practice.
+Instead of creating a simple demonstration application, the project includes
+common e-commerce workflows such as product browsing, authentication, wishlist,
+cart, checkout, order placement, administration, image management, and order
+lifecycle processing.
+
+This makes the application suitable for later deployment and testing with
+different infrastructure approaches such as:
+
+- AWS cloud infrastructure
+- Load balancing
+- Auto Scaling
+- Managed databases
+- Object storage
+- Docker
+- Kubernetes
+- Traffic and performance testing
+
+The application itself is therefore the workload, while the infrastructure
+and deployment technologies are separate parts of the overall project.
 
 ## Technology Stack
 
+### Application
+
 - Python
 - Flask
-- HTML / CSS / JavaScript
+- Jinja2 / HTML
+- CSS
+- JavaScript
+
+### Database
+
 - MySQL
-- SQLAlchemy
+- SQLAlchemy / Flask-SQLAlchemy
 - PyMySQL
+
+### Storage
+
 - Local filesystem storage
+- Local `uploads/` directories for application images
+
+### Other
+
 - Git / GitHub
 - k6 for traffic and load testing
 
 ## Application Documentation
 
-For a detailed explanation of the application:
+For a detailed explanation of the ShopEase application:
 
 [Application Documentation](docs/application/PROJECT_DOCUMENTATION.md)
 
@@ -45,14 +68,14 @@ For a detailed explanation of the application:
 
 ### Local Storage / EC2
 
-The local-storage version can be deployed on an Ubuntu EC2 instance
-using the guide below:
+The local-storage version can be deployed on an Ubuntu EC2 instance using
+the following guide:
 
 [Local Storage EC2 Deployment](docs/application/LOCAL_STORAGE_EC2_DEPLOYMENT.md)
 
 ### AWS RDS + S3
 
-The RDS + S3 version is maintained separately in the `main` branch.
+The RDS + S3 implementation is maintained separately in the `main` branch.
 
 ### Docker
 

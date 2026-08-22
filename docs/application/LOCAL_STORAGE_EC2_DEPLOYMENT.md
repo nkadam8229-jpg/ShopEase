@@ -362,28 +362,181 @@ Replace `EC2_PUBLIC_IP` with the public IPv4 address of the EC2 instance.
 
 ---
 
-## 16. Initial Admin Testing
+## 16. Verify ShopEase Admin Login
 
-Because this is a completely fresh installation, configure the catalog from the admin side first.
+Open the ShopEase Admin Login page and sign in using the administrator credentials created earlier.
 
-Recommended sequence:
+Confirm that the Admin panel opens successfully.
 
-1. Admin Login
-2. Create Categories
-3. Create Subcategories
-4. Create Brands
-5. Create Products
-6. Upload Product Images
-7. Create Variants
-8. Add Banners
+**This step only verifies that Admin Login is working.**
 
-Because this is the local-storage version, uploaded images will be stored under the EC2 instance's `uploads/` directory.
+Catalog creation and product/image population are handled in the optional inventory automation step below.
 
 ---
 
-## 17. Initial Customer Testing
+# 17. Inventory Upload Automation — Optional Convenience
 
-After creating the required catalog data:
+The inventory automation is **optional**. It is provided as a convenience so that the complete prepared demo inventory does not have to be entered manually through the Admin interface.
+
+The automation can prepare and import:
+
+- 4 categories
+- 20 subcategories
+- Required brands
+- 69 products
+- Product images
+
+**Approximate time:**
+
+- Base setup: ~2 minutes
+- Product import: ~15 minutes
+
+> **Important:** ShopEase must already be running and Admin Login must have been verified successfully before starting the automation.
+
+### Windows — Recommended
+
+#### 1. Download and Extract
+
+Download the inventory automation ZIP and extract it to any location.
+
+The extracted `ShopEase_Inventory` folder should contain:
+
+```text
+requirements.txt
+base_setup.py
+import_products.py
+ShopEase_Inventry_25pct/
+```
+
+The `ShopEase_Inventry_25pct` folder contains:
+
+```text
+Brands
+Categories
+Electronics
+Home-Decor
+Mens-Clothing
+Womens-Clothing
+```
+
+#### 2. Open Command Prompt
+
+Open the extracted **`ShopEase_Inventory`** folder in File Explorer.
+
+Stay outside the `ShopEase_Inventry_25pct` folder.
+
+Click the address bar, type:
+
+```text
+cmd
+```
+
+Press **Enter**.
+
+The Command Prompt will open directly inside the `ShopEase_Inventory` folder.
+
+#### 3. Automatically Install the Required Environment
+
+The automation package can be used on a fresh Windows PC. No manual Python installation or PATH configuration is required.
+
+Run this command:
+
+```cmd
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $url='https://www.python.org/ftp/python/3.13.15/python-3.13.15-amd64.exe'; $installer=Join-Path $env:TEMP 'python-3.13.15-amd64.exe'; Invoke-WebRequest -Uri $url -OutFile $installer; Start-Process $installer -ArgumentList '/quiet','InstallAllUsers=1','PrependPath=0','Include_test=0','TargetDir=C:\ShopEasePython' -Wait; Remove-Item $installer -Force; & 'C:\ShopEasePython\python.exe' -m venv '.venv'; & '.\.venv\Scripts\python.exe' -m pip install --upgrade pip; & '.\.venv\Scripts\python.exe' -m pip install -r requirements.txt; & '.\.venv\Scripts\python.exe' -m playwright install chromium; Write-Host ''; Write-Host 'ShopEase Inventory environment setup completed successfully.' -ForegroundColor Green"
+```
+
+This automatically:
+
+- Downloads Python 3.13.15
+- Installs Python silently
+- Creates `.venv` inside the current `ShopEase_Inventory` folder
+- Upgrades pip
+- Installs the packages from `requirements.txt`
+- Installs Playwright
+- Installs Playwright Chromium
+
+No manual PATH configuration is required.
+
+#### 4. Verify Python
+
+Run:
+
+```cmd
+.venv\Scripts\python.exe --version
+```
+
+Expected:
+
+```text
+Python 3.13.15
+```
+
+#### 5. Verify Pillow and Playwright
+
+Run:
+
+```cmd
+.venv\Scripts\python.exe -c "from PIL import Image; import playwright; print('Pillow OK'); print('Playwright OK')"
+```
+
+Expected:
+
+```text
+Pillow OK
+Playwright OK
+```
+
+#### 6. Run Base Setup
+
+Use the inventory folder relative to the current `ShopEase_Inventory` folder:
+
+```cmd
+.venv\Scripts\python.exe base_setup.py --inventory ".\ShopEase_Inventry_25pct" --base-url "http://<PUBLIC_IP>:5000"
+```
+
+Replace `<PUBLIC_IP>` with the public IP address of the ShopEase EC2 instance.
+
+No fixed Windows inventory path is required.
+
+After running the command:
+
+1. A Playwright Chromium browser window will open.
+2. Log in using your ShopEase Admin credentials.
+3. Confirm that the Admin panel opens successfully.
+4. Return to the Command Prompt.
+5. Press **Enter** to continue.
+
+**Important:** Do not press Enter until Admin Login has been completed successfully.
+
+**Approximate time:** ~2 minutes
+
+#### 7. Import Products
+
+After the base setup finishes successfully, run:
+
+```cmd
+.venv\Scripts\python.exe import_products.py --inventory ".\ShopEase_Inventry_25pct" --base-url "http://<PUBLIC_IP>:5000"
+```
+
+After running the command:
+
+1. A Playwright Chromium browser window will open.
+2. Log in using your ShopEase Admin credentials.
+3. Confirm that the Admin panel opens successfully.
+4. Return to the Command Prompt.
+5. Press **Enter** to continue.
+
+**Important:** Do not press Enter until Admin Login has been completed successfully.
+
+**Approximate time:** ~15 minutes
+
+The automation imports the prepared products and associated images.
+
+---
+
+## 18. Initial Customer Testing
+
+After the required catalog data has been created or imported:
 
 1. Register a customer
 2. Login
@@ -401,7 +554,7 @@ This confirms that the main customer workflow is working on the fresh EC2 instal
 
 ---
 
-## 18. Verify Local Image Storage
+## 19. Verify Local Image Storage
 
 After uploading images through the admin interface, check the local directories:
 
@@ -429,7 +582,7 @@ is working correctly.
 
 ---
 
-## 19. Verify the Order Lifecycle
+## 20. Verify the Order Lifecycle
 
 Place a test order from the customer side.
 
@@ -453,7 +606,7 @@ No external courier or delivery API is required for this deployment.
 
 ---
 
-## 20. Important Fresh-Server Behavior
+## 21. Important Fresh-Server Behavior
 
 This deployment intentionally starts fresh.
 
@@ -477,11 +630,11 @@ provides the database structure.
 
 The `uploads/` directories provide empty locations for newly uploaded images.
 
-Therefore, after deployment, the administrator must recreate the required catalog data and upload the required images.
+Therefore, after deployment, the administrator must recreate or import the required catalog data and upload the required images.
 
 ---
 
-## 21. Complete Command Reference
+## 22. Complete Command Reference
 
 ### Connect
 
@@ -592,7 +745,7 @@ http://EC2_PUBLIC_IP:5000
 
 ---
 
-## 22. Final Fresh-Server Setup
+## 23. Final Fresh-Server Setup
 
 The local-storage deployment consists of:
 
@@ -610,122 +763,6 @@ The application and database are located on the same EC2 instance in this setup.
 This setup is useful for understanding and testing the application before moving to a separated production-style architecture.
 
 ---
-
-# 23. Inventory Upload Automation
-
-Once Flask is started, products can be added manually through the application by creating categories, subcategories, brands, filling the product form, and uploading images.
-
-To avoid doing this manually for the complete demo inventory, an inventory automation package is provided.
-
-The automation sets up:
-
-* 4 categories
-* 20 subcategories
-* Required brands
-* 69 products
-* Product images
-
-**Approximate time:**
-
-* Base setup: ~2 minutes
-* Product import: ~15 minutes
-
-**[Download ShopEase Inventory Automation]**
-[Download ShopEase Inventory Automation](https://drive.google.com/file/d/1oB5b7vVpxxDruLHUZWVyaDsxjxM7NW-3/view?usp=sharing)
-
-> **Important:** The ShopEase application must already be running before starting the inventory automation.
-
----
-
-## Windows — Recommended
-
-### 1. Download and Extract
-
-Download the inventory ZIP and extract it.
-
-The extracted folder should contain:
-
-* `requirements.txt`
-* `base_setup.py`
-* `import_products.py`
-* `ShopEase_Inventry_25pct/`
-
-The `ShopEase_Inventry_25pct` folder contains:
-
-* `Brands`
-* `Categories`
-* `Electronics`
-* `Home-Decor`
-* `Mens-Clothing`
-* `Womens-Clothing`
-
-### 2. Open Command Prompt
-
-Open the extracted **`ShopEase_Inventory`** folder in File Explorer.
-
-Stay outside the `ShopEase_Inventry_25pct` folder.
-
-Click the address bar, type:
-
-```text
-cmd
-```
-
-Press **Enter**.
-
-The Command Prompt will open directly inside the `ShopEase_Inventory` folder.
-
-### 3. Install Required Packages
-
-Verify Python and pip:
-
-```text
-python --version
-python -m pip --version
-```
-
-Install the required packages:
-
-```text
-python -m pip install -r requirements.txt
-```
-
-### 4. Run Base Setup
-
-Replace `<INVENTORY_FOLDER_PATH>` with the path of your extracted `ShopEase_Inventry_25pct` folder.
-
-```text
-python base_setup.py --inventory "<INVENTORY_FOLDER_PATH>" --base-url "http://<PUBLIC_IP>:5000"
-```
-After running the command:
-
-A browser window will open automatically.
-Log in using your ShopEase Admin credentials.
-After successful login, return to the Command Prompt.
-Press Enter to continue the automation.
-
-Important: Do not press Enter until you have successfully logged in to the Admin panel in the browser.
-**Approximate time:** ~2 minutes
-
-### 5. Import Products
-
-After the base setup finishes successfully, run:
-
-```text
-python import_products.py --inventory "<INVENTORY_FOLDER_PATH>" --base-url "http://<PUBLIC_IP>:5000"
-```
-After running the command:
-
-A browser window will open automatically.
-Log in using your ShopEase Admin credentials.
-After successful login, return to the Command Prompt.
-Press Enter to continue the automation.
-
-Important: Do not press Enter until you have successfully logged in to the Admin panel in the browser.
-**Approximate time:** ~15 minutes
-
----
-
 
 ## 24. Difference from the `main` Branch
 

@@ -397,7 +397,11 @@ The automation can prepare and import:
 
 #### 1. Download and Extract
 
-Download the inventory automation ZIP and extract it to any location.
+Download the inventory automation ZIP:
+
+[Download ShopEase Inventory Automation ZIP](https://drive.google.com/file/d/1oB5b7vVpxxDruLHUZWVyaDsxjxM7NW-3/view?usp=sharing)
+
+Extract the downloaded ZIP to any location on the Windows PC.
 
 The extracted `ShopEase_Inventory` folder should contain:
 

@@ -399,7 +399,7 @@ The automation can prepare and import:
 
 Download the inventory automation ZIP:
 
-[Download ShopEase Inventory Automation ZIP](https://drive.google.com/file/d/1oB5b7vVpxxDruLHUZWVyaDsxjxM7NW-3/view?usp=sharing)
+[ShopEase_Inventory](https://drive.google.com/file/d/1oB5b7vVpxxDruLHUZWVyaDsxjxM7NW-3/view?usp=sharing)
 
 Extract the downloaded ZIP to any location on the Windows PC.
 

@@ -716,13 +716,13 @@ ShopEase | Products
                                             {% if product.images %}
 
                                                 <img
-                                                    src="{{ url_for(
-                                                        'main.product_image',
-                                                        image_id=product.images[0].id
-                                                    ) }}"
-                                                    alt="{{ product.name }}"
-                                                    class="product-image"
-                                                >
+    data-src="{{ url_for(
+        'main.product_image',
+        image_id=product.images[0].id
+    ) }}"
+    alt="{{ product.name }}"
+    class="product-image lazy-product-image"
+>
 
                                             {% else %}
 
@@ -825,5 +825,69 @@ ShopEase | Products
     </div>
 
 </section>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const lazyImages = document.querySelectorAll(
+        ".lazy-product-image"
+    );
+
+    if (!lazyImages.length) {
+        return;
+    }
+
+    function loadImage(img) {
+
+        if (!img.dataset.src) {
+            return;
+        }
+
+        img.src = img.dataset.src;
+        img.removeAttribute("data-src");
+
+    }
+
+
+    const observer = new IntersectionObserver(
+        function (entries, observer) {
+
+            entries.forEach(function (entry) {
+
+                if (!entry.isIntersecting) {
+                    return;
+                }
+
+                loadImage(entry.target);
+
+                observer.unobserve(entry.target);
+
+            });
+
+        },
+        {
+            root: null,
+
+            /*
+             * Load images when they are approximately
+             * one product row below the visible viewport.
+             */
+            rootMargin: "0px 0px 450px 0px",
+
+            threshold: 0
+        }
+    );
+
+
+    lazyImages.forEach(function (img) {
+
+        observer.observe(img);
+
+    });
+
+});
+</script>
+
 
 {% endblock %}

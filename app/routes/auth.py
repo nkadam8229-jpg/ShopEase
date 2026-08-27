@@ -15,7 +15,7 @@ from werkzeug.security import (
 
 from app import db
 from app.models import User
-
+from sqlalchemy.orm import joinedload
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -139,7 +139,7 @@ def login():
 
             return render_template("login.html")
 
-        user = User.query.filter_by(email=email).first()
+        user = User.query.options(joinedload(User.orders)).filter_by(email=email).first()
 
         if not user:
             flash(

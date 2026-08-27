@@ -4,6 +4,8 @@ from app.services.storage import LocalStorage, S3Storage
 
 
 class StorageService:
+    _s3_client = None  # Class-level cache for S3 client
+
     def __init__(self):
         storage_type = os.getenv("STORAGE_TYPE", "local").lower()
 
@@ -11,7 +13,9 @@ class StorageService:
             self.storage = LocalStorage()
 
         elif storage_type == "s3":
-            self.storage = S3Storage()
+            if StorageService._s3_client is None:
+                StorageService._s3_client = S3Storage()
+            self.storage = StorageService._s3_client
 
         else:
             raise ValueError(f"Unsupported storage type: {storage_type}")

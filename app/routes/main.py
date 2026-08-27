@@ -39,7 +39,8 @@ from datetime import datetime
 from difflib import SequenceMatcher
 import secrets
 from app.services.storage_service import StorageService
-
+from sqlalchemy.orm import joinedload
+from sqlalchemy import or_
 
 main_bp = Blueprint(
     "main",
@@ -108,13 +109,17 @@ def home():
             is_active=True,
             featured=True
         )
+        .options(
+            joinedload(Product.brand),
+            joinedload(Product.category),
+            joinedload(Product.subcategory)
+        )
         .order_by(
             Product.created_at.desc()
         )
         .limit(8)
         .all()
     )
-
 
     return render_template(
         "home.html",
@@ -143,17 +148,19 @@ def category_image(category_id):
 
     storage = StorageService()
 
-    if not storage.exists(category.image_key):
+    try:
+        image_file = storage.get_file(
+            category.image_key
+        )
+        response = send_file(
+            image_file,
+            mimetype="image/webp"
+        )
+        # Cache for 1 year (browser will cache the image)
+        response.headers['Cache-Control'] = 'public, max-age=31536000'
+        return response
+    except Exception:
         abort(404)
-
-    image_file = storage.get_file(
-        category.image_key
-    )
-
-    return send_file(
-        image_file,
-        mimetype="image/webp"
-    )
 
 # =========================================================
 # SUBCATEGORY IMAGE
@@ -176,17 +183,16 @@ def subcategory_image(subcategory_id):
 
     storage = StorageService()
 
-    if not storage.exists(subcategory.image_key):
+    try:
+        image_file = storage.get_file(
+            subcategory.image_key
+        )
+        return send_file(
+            image_file,
+            mimetype="image/webp"
+        )
+    except Exception:
         abort(404)
-
-    image_file = storage.get_file(
-        subcategory.image_key
-    )
-
-    return send_file(
-        image_file,
-        mimetype="image/webp"
-    )
 
 # =========================================================
 # PRODUCT IMAGE
@@ -570,6 +576,11 @@ def products():
         .filter_by(
             is_active=True
         )
+        .options(
+            joinedload(Product.brand),
+            joinedload(Product.category),
+            joinedload(Product.subcategory)
+        )
     )
 
 
@@ -692,168 +703,30 @@ def products():
 
     product_query = base_query
     # =====================================================
-    # SEARCH
+    # =====================================================
+    # SEARCH - NOW DONE IN DATABASE
+    # =====================================================
 
     search_scores = {}
 
     if search_text:
-
-        search_words = [
-            word.lower()
-            for word in search_text.split()
-            if word.strip()
-        ]
-
-
-    # -------------------------------------------------
-    # GET PRODUCTS AVAILABLE IN CURRENT
-    # CATEGORY / SUBCATEGORY
-    # -------------------------------------------------
-
-    search_candidates = (
-        base_query
-        .all()
-    )
-
-
-    matching_product_ids = []
-
-
-    for product in search_candidates:
-
-        searchable_values = [
-
-            product.name or "",
-
-            (
-                product.brand.name
-                if product.brand
-                else ""
-            ),
-
-            (
-                product.category.name
-                if product.category
-                else ""
-            ),
-
-            (
-                product.subcategory.name
-                if product.subcategory
-                else ""
-            )
-        ]
-
-
-        searchable_text = " ".join(
-            searchable_values
-        ).lower()
-
-
-        # -------------------------------------------------
-        # DIRECT MATCH
-        # -------------------------------------------------
-
-        if search_text.lower() in searchable_text:
-
-            matching_product_ids.append(
-                product.id
-            )
-
-            search_scores[product.id] = 100
-
-            continue
-
-
-        # -------------------------------------------------
-        # WORD / FUZZY MATCH
-        # -------------------------------------------------
-
-        best_score = 0
-
-
-        for search_word in search_words:
-
-            word_best_score = 0
-
-
-            for value in searchable_values:
-
-                value = value.lower().strip()
-
-                if not value:
-                    continue
-
-
-                # Exact word / partial word match
-
-                if search_word in value:
-
-                    word_best_score = 95
-
-                    break
-
-
-                # Compare against individual words
-
-                value_words = value.split()
-
-
-                for value_word in value_words:
-
-                    similarity = (
-                        SequenceMatcher(
-                            None,
-                            search_word,
-                            value_word
-                        ).ratio()
-                        * 100
-                    )
-
-
-                    if similarity > word_best_score:
-
-                        word_best_score = similarity
-
-
-            best_score = max(
-                best_score,
-                word_best_score
-            )
-
-
-        # -------------------------------------------------
-        # ACCEPT REASONABLE FUZZY MATCH
-        # -------------------------------------------------
-
-        if best_score >= 75:
-
-            matching_product_ids.append(
-                product.id
-            )
-
-            search_scores[product.id] = (
-                best_score
-            )
-
-
-    # -------------------------------------------------
-    # NO SEARCH RESULTS
-    # -------------------------------------------------
-
-    if matching_product_ids:
-
+        search_pattern = f"%{search_text}%"
+        
+        # Apply search filter directly - NO need to rebuild
         product_query = product_query.filter(
-            Product.id.in_(
-                matching_product_ids
+            or_(
+                Product.name.ilike(search_pattern),
+                Product.sku.ilike(search_pattern),
+                Product.description.ilike(search_pattern),
+                Product.brand.has(Brand.name.ilike(search_pattern)),
+                Product.category.has(Category.name.ilike(search_pattern)),
+                Product.subcategory.has(Subcategory.name.ilike(search_pattern))
             )
         )
-
-    else:
-
-        product_query = product_query.filter(
-            Product.id == -1
-        )
+        
+        # No need to rebuild - the filter is already applied!
+        # search_scores is only used for sorting, which we're not using
+        # since we removed fuzzy matching
 
 
     # -----------------------------------------------------
@@ -861,15 +734,11 @@ def products():
     # -----------------------------------------------------
 
     if selected_brands:
-
-        product_query = product_query.filter(
-            Product.brand_id.in_(
-                Brand.id
-                for Brand in brands
-                if Brand.slug in selected_brands
-            )
-        )
-
+        brand_ids = [b.id for b in brands if b.slug in selected_brands]
+        if brand_ids:
+            product_query = product_query.filter(Product.brand_id.in_(brand_ids))
+        else:
+            product_query = product_query.filter(Product.id == -1)
 
     # -----------------------------------------------------
     # PRICE FILTER
@@ -962,19 +831,12 @@ def products():
     # =====================================================
     # SEARCH RELEVANCE
     #
-    # When the customer is searching and has not selected
-    # another sorting method, show the closest matches first.
+    # When searching with "recommended" sort, 
+    # SQL already returned matching products
     # =====================================================
 
-    if search_text and sort == "recommended":
-
-        products.sort(
-            key=lambda product: search_scores.get(
-                product.id,
-                0
-            ),
-            reverse=True
-        )
+    # No Python sorting needed - database already filtered
+    pass
 
 
     # =====================================================
@@ -1047,6 +909,12 @@ def product_detail(slug):
             slug=slug,
             is_active=True
         )
+        .options(
+            joinedload(Product.brand),
+            joinedload(Product.category),
+            joinedload(Product.subcategory),
+            joinedload(Product.images)
+        )
         .first()
     )
 
@@ -1065,6 +933,11 @@ def product_detail(slug):
             Product.is_active.is_(True),
             Product.category_id == product.category_id,
             Product.id != product.id
+        )
+        .options(
+            joinedload(Product.brand),
+            joinedload(Product.category),
+            joinedload(Product.subcategory)
         )
         .order_by(
             Product.created_at.desc()
@@ -1403,6 +1276,10 @@ def cart():
         CartItem.query
         .filter_by(
             user_id=user_id
+        )
+        .options(
+            joinedload(CartItem.product),
+            joinedload(CartItem.product_size)
         )
         .order_by(
             CartItem.created_at.desc()
@@ -1763,6 +1640,9 @@ def wishlist():
         .filter(
             Product.is_active.is_(True)
         )
+        .options(
+            joinedload(WishlistItem.product)
+        )
         .order_by(
             WishlistItem.created_at.desc()
         )
@@ -2019,6 +1899,10 @@ def checkout():
         CartItem.query
         .filter_by(
             user_id=user_id
+        )
+        .options(
+            joinedload(CartItem.product),
+            joinedload(CartItem.product_size)
         )
         .order_by(
             CartItem.created_at.desc()
@@ -2832,6 +2716,10 @@ def order_confirmation(order_number):
         .filter_by(
             order_id=order.id
         )
+        .options(
+            joinedload(OrderItem.product),
+            joinedload(OrderItem.product_size)
+        )
         .all()
     )
 
@@ -2921,6 +2809,9 @@ def profile():
     orders = (
         Order.query
         .filter_by(user_id=user_id)
+        .options(
+            joinedload(Order.items)
+        )
         .order_by(
             Order.created_at.desc()
         )
@@ -2930,14 +2821,8 @@ def profile():
     order_items_map = {}
 
     for order in orders:
-
-        order_items_map[order.id] = (
-            OrderItem.query
-            .filter_by(
-                order_id=order.id
-            )
-            .all()
-        )
+        # Items are already loaded via joinedload
+        order_items_map[order.id] = order.items
 
 
     # -----------------------------------------------------

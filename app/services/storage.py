@@ -130,3 +130,19 @@ class StorageFactory:
             return S3Storage()
 
         raise ValueError(f"Unsupported storage type: {storage_type}")
+
+
+def get_presigned_url(self, key, expires_in=3600):
+    """Generate a presigned URL for direct S3 access"""
+    try:
+        response = self.s3_client.generate_presigned_url(
+            'get_object',
+            Params={
+                'Bucket': self.bucket_name,
+                'Key': key
+            },
+            ExpiresIn=expires_in
+        )
+        return response
+    except Exception:
+        return None

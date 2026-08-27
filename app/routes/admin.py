@@ -11,6 +11,7 @@ from flask import (
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash
+from sqlalchemy.orm import joinedload
 
 from app import db
 from app.models import (
@@ -123,8 +124,18 @@ def dashboard():
     if "admin_id" not in session:
         return redirect(url_for("admin.login"))
 
+    # Add counts for dashboard
+    total_products = Product.query.filter_by(is_active=True).count()
+    total_orders = Order.query.count()
+    total_users = User.query.count()
+    pending_orders = Order.query.filter_by(status="PENDING").count()
+    
     return render_template(
-        "admin/dashboard.html"
+        "admin/dashboard.html",
+        total_products=total_products,
+        total_orders=total_orders,
+        total_users=total_users,
+        pending_orders=pending_orders
     )
 
 
@@ -1692,12 +1703,16 @@ def brand_image(brand_id):
 
 @admin_bp.route("/products")
 def products():
-
     if "admin_id" not in session:
         return redirect(url_for("admin.login"))
 
     products = (
         Product.query
+        .options(
+            joinedload(Product.category),
+            joinedload(Product.subcategory),
+            joinedload(Product.brand)
+        )
         .order_by(
             Product.created_at.desc()
         )
@@ -4621,6 +4636,90 @@ def orders():
             User,
             Order.user_id == User.id
         )
+        .options(
+            joinedload(Order.user),
+            joinedload(Order.items)
+        )
+    )
+
+
+    # -----------------------------------------------------
+    # SEARCH
+    #
+    # Order number
+    # Customer name
+    # Email
+    # Phone
+    # -----------------------------------------------------
+
+    if search:
+
+        search_pattern = (
+            f"%{search}%"
+        )
+
+        query = query.filter(
+            db.or_(
+                Order.order_number.ilike(
+                    search_pattern
+                ),
+
+                User.full_name.ilike(
+                    search_pattern
+                ),
+
+                User.email.ilike(
+                    search_pattern
+                ),
+
+                User.phone.ilike(
+                    search_pattern
+                )
+            )
+        )
+
+
+    # -----------------------------------------------------
+    # STATUS FILTER
+    # -----------------------------------------------------
+
+    allowed_statuses = {
+        "PENDING",
+        "CONFIRMED",
+        "SHIPPED",
+        "DELIVERED"
+    }
+
+
+    if status in allowed_statuses:
+
+        query = query.filter(
+            Order.status == status
+        )
+
+    else:
+
+        status = ""
+
+
+    # -----------------------------------------------------
+    # GET ORDERS
+    # -----------------------------------------------------
+
+    orders = (
+        query
+        .order_by(
+            Order.created_at.desc()
+        )
+        .all()
+    )
+
+
+    return render_template(
+        "admin/orders.html",
+        orders=orders,
+        search=search,
+        status=status
     )
 
 

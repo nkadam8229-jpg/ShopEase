@@ -9,6 +9,7 @@ from flask import (
 )
 
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash
 
@@ -1696,13 +1697,154 @@ def products():
     if "admin_id" not in session:
         return redirect(url_for("admin.login"))
 
-    products = (
+    # -----------------------------------------------------
+    # PAGINATION
+    # -----------------------------------------------------
+
+    try:
+
+        page = max(
+            int(request.args.get("page", 1)),
+            1
+        )
+
+    except (TypeError, ValueError):
+
+        page = 1
+
+
+    limit = 12
+
+    offset = (
+        page - 1
+    ) * limit
+
+
+    # -----------------------------------------------------
+    # PRODUCT QUERY
+    # -----------------------------------------------------
+
+    query = (
         Product.query
         .order_by(
             Product.created_at.desc()
         )
+    )
+
+
+    # -----------------------------------------------------
+    # SEARCH + FILTERS
+    # -----------------------------------------------------
+
+    search = request.args.get(
+        "search",
+        ""
+    ).strip()
+
+
+    category_id = request.args.get(
+        "category",
+        ""
+    ).strip()
+
+
+    subcategory_id = request.args.get(
+        "subcategory",
+        ""
+    ).strip()
+
+
+    brand_id = request.args.get(
+        "brand",
+        ""
+    ).strip()
+
+
+    if search:
+
+        search_pattern = (
+            f"%{search}%"
+        )
+
+        search_conditions = [
+            Product.name.ilike(
+                search_pattern
+            ),
+
+            Product.sku.ilike(
+                search_pattern
+            ),
+
+            Product.brand.has(
+                Brand.name.ilike(
+                    search_pattern
+                )
+            )
+        ]
+
+        if search.isdigit():
+
+            search_conditions.append(
+                Product.id == int(search)
+            )
+
+        query = query.filter(
+            db.or_(
+                *search_conditions
+            )
+        )
+
+
+    if category_id:
+
+        query = query.filter(
+            Product.category_id == int(
+                category_id
+            )
+        )
+
+
+    if subcategory_id:
+
+        query = query.filter(
+            Product.subcategory_id == int(
+                subcategory_id
+            )
+        )
+
+
+    if brand_id:
+
+        query = query.filter(
+            Product.brand_id == int(
+                brand_id
+            )
+        )
+
+
+
+
+    # -----------------------------------------------------
+    # TOTAL PRODUCTS
+    # -----------------------------------------------------
+
+    total_products = query.count()
+
+
+    # -----------------------------------------------------
+    # CURRENT BATCH ONLY
+    # -----------------------------------------------------
+
+    products = (
+        query
+        .offset(offset)
+        .limit(limit)
         .all()
     )
+    
+    # -----------------------------------------------------
+    # CATEGORIES / SUBCATEGORIES / BRANDS
+    # -----------------------------------------------------
 
     categories = (
         Category.query
@@ -1728,12 +1870,32 @@ def products():
         .all()
     )
 
+
+    # -----------------------------------------------------
+    # AJAX / LAZY LOAD RESPONSE
+    # -----------------------------------------------------
+
+    if request.args.get("lazy") == "1":
+
+        return render_template(
+            "admin/products.html",
+            products=products,
+            categories=categories,
+            subcategories=subcategories,
+            brands=brands,
+            total_products=total_products,
+            page=page,
+            limit=limit
+        )
     return render_template(
         "admin/products.html",
         products=products,
         categories=categories,
         subcategories=subcategories,
-        brands=brands
+        brands=brands,
+        total_products=total_products,
+        page=page,
+        limit=limit
     )
 
 
@@ -4612,6 +4774,29 @@ def orders():
 
 
     # -----------------------------------------------------
+    # PAGINATION
+    # -----------------------------------------------------
+
+    try:
+
+        page = max(
+            int(request.args.get("page", 1)),
+            1
+        )
+
+    except (TypeError, ValueError):
+
+        page = 1
+
+
+    limit = 5
+
+    offset = (
+        page - 1
+    ) * limit
+
+
+    # -----------------------------------------------------
     # BASE QUERY
     # -----------------------------------------------------
 
@@ -4621,16 +4806,17 @@ def orders():
             User,
             Order.user_id == User.id
         )
+        .options(
+            joinedload(Order.user),
+            joinedload(Order.items)
+        )
     )
 
 
     # -----------------------------------------------------
     # SEARCH
     #
-    # Order number
-    # Customer name
-    # Email
-    # Phone
+    # Searches the ENTIRE database before pagination.
     # -----------------------------------------------------
 
     if search:
@@ -4684,7 +4870,16 @@ def orders():
 
 
     # -----------------------------------------------------
-    # GET ORDERS
+    # TOTAL MATCHING ORDERS
+    #
+    # This count is independent of lazy loading.
+    # -----------------------------------------------------
+
+    total_orders = query.count()
+
+
+    # -----------------------------------------------------
+    # GET ONLY CURRENT BATCH
     # -----------------------------------------------------
 
     orders = (
@@ -4692,15 +4887,25 @@ def orders():
         .order_by(
             Order.created_at.desc()
         )
+        .offset(offset)
+        .limit(limit)
         .all()
     )
 
+
+
+    # -----------------------------------------------------
+    # INITIAL PAGE
+    # -----------------------------------------------------
 
     return render_template(
         "admin/orders.html",
         orders=orders,
         search=search,
-        status=status
+        status=status,
+        total_orders=total_orders,
+        page=page,
+        limit=limit
     )
 
 # =========================================================

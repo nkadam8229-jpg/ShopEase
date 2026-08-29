@@ -110,8 +110,8 @@ Orders | ShopEase Admin
                     id="orderResultCount"
                     class="text-muted small"
                 >
-                    {{ orders|length }}
-                    {% if orders|length == 1 %}
+                    {{ total_orders }}
+                    {% if total_orders == 1 %}
                         order
                     {% else %}
                         orders
@@ -734,6 +734,28 @@ Orders | ShopEase Admin
 
 
         <!-- =================================================
+             LAZY LOAD INDICATOR
+        ================================================== -->
+
+        <div
+            id="ordersLoading"
+            class="text-center py-3 d-none"
+        >
+
+            <div
+                class="spinner-border spinner-border-sm"
+                role="status"
+                aria-hidden="true"
+            ></div>
+
+            <span class="ms-2 text-muted">
+                Loading more orders...
+            </span>
+
+        </div>
+
+
+        <!-- =================================================
              NO SEARCH RESULTS
         ================================================== -->
 
@@ -793,8 +815,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const statusFilter =
         document.getElementById("statusFilter");
 
-    const orderCards =
-        document.querySelectorAll(".order-card");
+    const ordersContainer =
+        document.getElementById("ordersContainer");
 
     const resultCount =
         document.getElementById("orderResultCount");
@@ -802,75 +824,88 @@ document.addEventListener("DOMContentLoaded", function () {
     const noOrderResults =
         document.getElementById("noOrderResults");
 
-
-    function updateOrders() {
-
-        const searchTerm =
-            searchInput.value
-                .trim()
-                .toLowerCase();
+    const ordersLoading =
+        document.getElementById("ordersLoading");
 
 
-        const selectedStatus =
-            statusFilter.value
-                .toUpperCase();
+    const LIMIT = 5;
+
+    let currentPage = 1;
+
+    let loading = false;
+
+    let hasMore =
+        {{ orders|length }} < {{ total_orders }};
 
 
-        let visibleCount = 0;
+    /*
+     * ------------------------------------------------------
+     * GET CURRENT SEARCH / FILTER VALUES
+     * ------------------------------------------------------
+     */
+
+    function getFilters() {
+
+        return {
+
+            search:
+                searchInput.value
+                    .trim(),
+
+            status:
+                statusFilter.value
+                    .trim()
+                    .toUpperCase()
+
+        };
+
+    }
 
 
-        orderCards.forEach(function (card) {
+    /*
+     * ------------------------------------------------------
+     * UPDATE TOTAL COUNT
+     * ------------------------------------------------------
+     */
 
-            const searchableText =
-                card.dataset.search
-                    .toLowerCase();
+    function updateCountFromDocument(doc) {
 
-
-            const cardStatus =
-                card.dataset.status
-                    .toUpperCase();
-
-
-            const matchesSearch =
-                searchTerm === "" ||
-                searchableText.includes(
-                    searchTerm
-                );
-
-
-            const matchesStatus =
-                selectedStatus === "" ||
-                cardStatus === selectedStatus;
-
-
-            if (
-                matchesSearch &&
-                matchesStatus
-            ) {
-
-                card.style.display = "";
-
-                visibleCount++;
-
-            } else {
-
-                card.style.display = "none";
-
-            }
-
-        });
-
-
-        resultCount.textContent =
-            visibleCount +
-            (
-                visibleCount === 1
-                    ? " order"
-                    : " orders"
+        const newCount =
+            doc.getElementById(
+                "orderResultCount"
             );
 
+        if (!newCount) {
+            return;
+        }
 
-        if (visibleCount === 0) {
+        resultCount.textContent =
+            newCount.textContent.trim();
+
+    }
+
+
+    /*
+     * ------------------------------------------------------
+     * SHOW / HIDE EMPTY RESULT MESSAGE
+     * ------------------------------------------------------
+     */
+
+    function updateEmptyState() {
+
+        if (!noOrderResults) {
+            return;
+        }
+
+        const cardCount =
+            ordersContainer
+                ? ordersContainer.querySelectorAll(
+                    ".order-card"
+                ).length
+                : 0;
+
+
+        if (cardCount === 0) {
 
             noOrderResults.classList.remove(
                 "d-none"
@@ -887,21 +922,371 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 
+    /*
+     * ------------------------------------------------------
+     * LOAD ONE PAGE FROM SERVER
+     *
+     * IMPORTANT:
+     * Search and filtering happen on the SERVER.
+     * Therefore every request searches the entire database
+     * before the LIMIT 5 is applied.
+     * ------------------------------------------------------
+     */
+
+    async function fetchOrderPage(
+        page,
+        replace
+    ) {
+
+        if (loading) {
+            return;
+        }
+
+        loading = true;
+
+
+        if (ordersLoading) {
+
+            ordersLoading.classList.remove(
+                "d-none"
+            );
+
+        }
+
+
+        const filters =
+            getFilters();
+
+
+        const params =
+            new URLSearchParams();
+
+        params.set(
+            "page",
+            page
+        );
+
+
+        if (filters.search) {
+
+            params.set(
+                "search",
+                filters.search
+            );
+
+        }
+
+
+        if (filters.status) {
+
+            params.set(
+                "status",
+                filters.status
+            );
+
+        }
+
+
+        try {
+
+            const response =
+                await fetch(
+                    "{{ url_for('admin.orders') }}" +
+                    "?" +
+                    params.toString(),
+                    {
+                        headers: {
+                            "X-Requested-With":
+                                "XMLHttpRequest"
+                        }
+                    }
+                );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "Unable to load orders."
+                );
+
+            }
+
+
+            const html =
+                await response.text();
+
+
+            /*
+             * Parse the normal orders page returned
+             * by the server.
+             */
+
+            const parser =
+                new DOMParser();
+
+            const doc =
+                parser.parseFromString(
+                    html,
+                    "text/html"
+                );
+
+
+            const newContainer =
+                doc.getElementById(
+                    "ordersContainer"
+                );
+
+
+            /*
+             * Update the total count from the
+             * server-calculated count.
+             */
+
+            updateCountFromDocument(
+                doc
+            );
+
+
+            /*
+             * Search/filter result can be empty.
+             */
+
+            if (replace) {
+
+                if (ordersContainer) {
+
+                    ordersContainer.innerHTML =
+                        newContainer
+                            ? newContainer.innerHTML
+                            : "";
+
+                }
+
+            } else {
+
+                if (
+                    ordersContainer &&
+                    newContainer
+                ) {
+
+                    ordersContainer.insertAdjacentHTML(
+                        "beforeend",
+                        newContainer.innerHTML
+                    );
+
+                }
+
+            }
+
+
+            const loadedInResponse =
+                newContainer
+                    ? newContainer.querySelectorAll(
+                        ".order-card"
+                    ).length
+                    : 0;
+
+
+            currentPage =
+                page;
+
+
+            /*
+             * Fewer than 5 means there are no
+             * more matching orders.
+             */
+
+            hasMore =
+                loadedInResponse === LIMIT;
+
+
+            updateEmptyState();
+
+
+        } catch (error) {
+
+            console.error(
+                "Orders loading failed:",
+                error
+            );
+
+        } finally {
+
+            loading = false;
+
+
+            if (ordersLoading) {
+
+                ordersLoading.classList.add(
+                    "d-none"
+                );
+
+            }
+
+        }
+
+    }
+
+
+    /*
+     * ------------------------------------------------------
+     * SEARCH / STATUS FILTER
+     *
+     * Reset to page 1.
+     *
+     * Server performs the search across ALL orders.
+     * ------------------------------------------------------
+     */
+
+    let searchTimer;
+
+
+    function refreshOrders() {
+
+        clearTimeout(
+            searchTimer
+        );
+
+
+        searchTimer =
+            setTimeout(
+                function () {
+
+                    currentPage = 1;
+
+                    hasMore = true;
+
+                    fetchOrderPage(
+                        1,
+                        true
+                    );
+
+                },
+                300
+            );
+
+    }
+
+
     searchInput.addEventListener(
         "input",
-        updateOrders
+        refreshOrders
     );
 
 
     statusFilter.addEventListener(
         "change",
-        updateOrders
+        refreshOrders
+    );
+
+
+    /*
+     * ------------------------------------------------------
+     * NEAR-BOTTOM LAZY LOADING
+     *
+     * Required sequence:
+     *
+     * 1-5   → at #4 → load 6-10
+     * 6-10  → at #8 → load 11-15
+     * 11-15 → at #13 → load 16-20
+     * ------------------------------------------------------
+     */
+
+    window.addEventListener(
+        "scroll",
+        function () {
+
+            if (
+                loading ||
+                !hasMore ||
+                !ordersContainer
+            ) {
+
+                return;
+
+            }
+
+
+            const cards =
+                ordersContainer.querySelectorAll(
+                    ".order-card"
+                );
+
+
+            if (cards.length < 4) {
+
+                return;
+
+            }
+
+
+            /*
+             * For the first batch:
+             *
+             * cards[3] = order #4
+             *
+             * For subsequent batches, the trigger
+             * is the 3rd card of the newly loaded
+             * batch:
+             *
+             * 1-10  → cards[7]  = #8
+             * 1-15  → cards[12] = #13
+             * 1-20  → cards[17] = #18
+             */
+
+            let triggerIndex;
+
+
+            if (cards.length === LIMIT) {
+
+                triggerIndex = 3;
+
+            } else {
+
+                triggerIndex =
+                    cards.length - 3;
+
+            }
+
+
+            const triggerCard =
+                cards[triggerIndex];
+
+
+            if (!triggerCard) {
+                return;
+            }
+
+
+            const rect =
+                triggerCard.getBoundingClientRect();
+
+
+            /*
+             * Trigger when the trigger card enters
+             * the visible screen area.
+             *
+             * We do NOT wait for the absolute bottom.
+             */
+
+            if (
+                rect.top <=
+                window.innerHeight
+            ) {
+
+                fetchOrderPage(
+                    currentPage + 1,
+                    false
+                );
+
+            }
+
+        }
     );
 
 });
 
 </script>
-
 {% endif %}
 
 

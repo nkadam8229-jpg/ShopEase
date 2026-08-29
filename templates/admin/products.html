@@ -1017,11 +1017,9 @@ Products | ShopEase Admin
                     "clearFilters"
                 );
 
-            const rows =
-                Array.from(
-                    document.querySelectorAll(
-                        ".product-row"
-                    )
+            const tableBody =
+                document.getElementById(
+                    "productsTableBody"
                 );
 
             const noResults =
@@ -1030,9 +1028,21 @@ Products | ShopEase Admin
                 );
 
 
-            /* =================================================
-               FILTER PRODUCTS
-            ================================================= */
+            const LIMIT = 12;
+
+            let currentPage = 1;
+
+            let loading = false;
+
+            let hasMore =
+                {{ products|length }} < {{ total_products }};
+
+
+            /*
+             * --------------------------------------------------
+             * FILTER CURRENTLY LOADED PRODUCTS
+             * --------------------------------------------------
+             */
 
             function filterProducts() {
 
@@ -1049,6 +1059,12 @@ Products | ShopEase Admin
 
                 const selectedBrand =
                     brandFilter.value;
+
+
+                const rows =
+                    tableBody.querySelectorAll(
+                        ".product-row"
+                    );
 
 
                 let visibleCount = 0;
@@ -1080,10 +1096,6 @@ Products | ShopEase Admin
                             row.dataset.brandId || "";
 
 
-                        /* =====================================
-                           LIVE SEARCH
-                        ===================================== */
-
                         const matchesSearch =
                             !search ||
 
@@ -1104,29 +1116,17 @@ Products | ShopEase Admin
                             );
 
 
-                        /* =====================================
-                           CATEGORY
-                        ===================================== */
-
                         const matchesCategory =
                             !selectedCategory ||
                             categoryId ===
                             selectedCategory;
 
 
-                        /* =====================================
-                           SUBCATEGORY
-                        ===================================== */
-
                         const matchesSubcategory =
                             !selectedSubcategory ||
                             subcategoryId ===
                             selectedSubcategory;
 
-
-                        /* =====================================
-                           BRAND
-                        ===================================== */
 
                         const matchesBrand =
                             !selectedBrand ||
@@ -1169,9 +1169,11 @@ Products | ShopEase Admin
             }
 
 
-            /* =================================================
-               SUBCATEGORY OPTIONS
-               ================================================= */
+            /*
+             * --------------------------------------------------
+             * SUBCATEGORY OPTIONS
+             * --------------------------------------------------
+             */
 
             function updateSubcategoryOptions() {
 
@@ -1229,37 +1231,314 @@ Products | ShopEase Admin
             }
 
 
-            /* =================================================
-               EVENTS
-            ================================================= */
+            /*
+             * --------------------------------------------------
+             * LOAD NEXT PRODUCT PAGE
+             *
+             * Initial:
+             * 1-12
+             *
+             * Near #8:
+             * load 13-24
+             *
+             * Near #20:
+             * load 25-36
+             * --------------------------------------------------
+             */
 
-            searchInput.addEventListener(
-                "input",
-                filterProducts
-            );
+            async function fetchProductPage(
+                page
+            ) {
+
+                if (
+                    loading ||
+                    !hasMore
+                ) {
+
+                    return;
+
+                }
 
 
-            categoryFilter.addEventListener(
-                "change",
+                loading = true;
+
+
+                try {
+
+                    const params =
+    new URLSearchParams();
+
+params.set(
+    "page",
+    page
+);
+
+params.set(
+    "lazy",
+    "1"
+);
+
+if (searchInput.value.trim()) {
+
+    params.set(
+        "search",
+        searchInput.value.trim()
+    );
+
+}
+
+if (categoryFilter.value) {
+
+    params.set(
+        "category",
+        categoryFilter.value
+    );
+
+}
+
+if (subcategoryFilter.value) {
+
+    params.set(
+        "subcategory",
+        subcategoryFilter.value
+    );
+
+}
+
+if (brandFilter.value) {
+
+    params.set(
+        "brand",
+        brandFilter.value
+    );
+}
+
+
+const response =
+    await fetch(
+        "{{ url_for('admin.products') }}" +
+        "?" +
+        params.toString(),
+        {
+                                headers: {
+                                    "X-Requested-With":
+                                        "XMLHttpRequest"
+                                }
+                            }
+                        );
+
+
+                    if (!response.ok) {
+
+                        throw new Error(
+                            "Unable to load products."
+                        );
+
+                    }
+
+
+                    const html =
+                        await response.text();
+
+
+                    const parser =
+                        new DOMParser();
+
+
+                    const doc =
+                        parser.parseFromString(
+                            html,
+                            "text/html"
+                        );
+
+
+                    const newRows =
+                        doc.querySelectorAll(
+                            "#productsTableBody .product-row"
+                        );
+
+
+                    if (
+                        !newRows.length
+                    ) {
+
+                        hasMore = false;
+
+                        return;
+
+                    }
+
+
+                    newRows.forEach(
+                        function (row) {
+
+                            tableBody.appendChild(
+                                row
+                            );
+
+                        }
+                    );
+
+
+                    currentPage =
+                        page;
+
+
+                    hasMore =
+                        newRows.length === LIMIT;
+
+
+                    filterProducts();
+
+                } catch (error) {
+
+                    console.error(
+                        "Products loading failed:",
+                        error
+                    );
+
+                } finally {
+
+                    loading = false;
+
+                }
+
+            }
+
+
+            /*
+             * --------------------------------------------------
+             * NEAR-BOTTOM LAZY LOADING
+             *
+             * 1-12
+             *    ↓ around #8
+             * 13-24
+             *    ↓ around #20
+             * 25-36
+             *    ↓ around #32
+             * --------------------------------------------------
+             */
+
+            window.addEventListener(
+                "scroll",
                 function () {
 
-                    updateSubcategoryOptions();
-                    filterProducts();
+                    if (
+                        loading ||
+                        !hasMore
+                    ) {
+
+                        return;
+
+                    }
+
+
+                    const rows =
+                        tableBody.querySelectorAll(
+                            ".product-row"
+                        );
+
+
+                    if (
+                        rows.length < 8
+                    ) {
+
+                        return;
+
+                    }
+
+
+                    const triggerIndex =
+                        rows.length === LIMIT
+                            ? 7
+                            : rows.length - 5;
+
+
+                    const triggerRow =
+                        rows[triggerIndex];
+
+
+                    if (!triggerRow) {
+                        return;
+                    }
+
+
+                    const rect =
+                        triggerRow.getBoundingClientRect();
+
+
+                    if (
+                        rect.top <=
+                        window.innerHeight
+                    ) {
+
+                        fetchProductPage(
+                            currentPage + 1
+                        );
+
+                    }
 
                 }
             );
 
+async function resetProductResults() {
+
+    if (loading) {
+        return;
+    }
+
+
+    tableBody.innerHTML = "";
+
+    currentPage = 0;
+
+    hasMore = true;
+
+
+    await fetchProductPage(
+        1
+    );
+
+}
+
+            /*
+             * --------------------------------------------------
+             * SEARCH / FILTER EVENTS
+             * --------------------------------------------------
+             */
+
+            searchInput.addEventListener(
+    "input",
+    function () {
+
+        resetProductResults();
+
+    }
+);
+
+
+            categoryFilter.addEventListener(
+    "change",
+    function () {
+
+        updateSubcategoryOptions();
+
+        resetProductResults();
+
+    }
+);
+
 
             subcategoryFilter.addEventListener(
-                "change",
-                filterProducts
-            );
+    "change",
+    resetProductResults
+);
 
 
-            brandFilter.addEventListener(
-                "change",
-                filterProducts
-            );
+           brandFilter.addEventListener(
+    "change",
+    resetProductResults
+);
 
 
             clearButton.addEventListener(
@@ -1274,17 +1553,17 @@ Products | ShopEase Admin
 
                     brandFilter.value = "";
 
+
                     updateSubcategoryOptions();
 
-                    filterProducts();
-
+resetProductResults();
                 }
             );
 
 
-            /* =================================================
-               INITIALIZE
-            ================================================= */
+            /*
+             * INITIAL FILTER STATE
+             */
 
             updateSubcategoryOptions();
 

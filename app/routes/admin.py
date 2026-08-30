@@ -8,7 +8,7 @@ from flask import (
     url_for
 )
 
-from sqlalchemy import func
+from sqlalchemy import func, literal_column
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash
@@ -4915,24 +4915,7 @@ def orders():
 @admin_bp.route("/revenue")
 def revenue():
 
-    if "admin_id" not in session:
-        return redirect(
-            url_for("admin.login")
-        )
-
     from datetime import datetime
-
-    # -----------------------------------------------------
-    # SELECTED REVENUE SECTION
-    # -----------------------------------------------------
-    #
-    # overview     -> overall revenue + graph
-    # category     -> category-wise revenue
-    # subcategory  -> subcategory-wise revenue
-    #
-    # The Revenue page will display only one section
-    # at a time.
-    # -----------------------------------------------------
 
     section = request.args.get(
         "section",
@@ -4948,487 +4931,566 @@ def revenue():
     if section not in allowed_sections:
         section = "overview"
 
-    # -----------------------------------------------------
-    # ONLY DELIVERED ORDERS COUNT AS REVENUE
-    # -----------------------------------------------------
-
-    delivered_orders = (
-        Order.query
-        .filter(
-            Order.status == "DELIVERED"
-        )
-        .order_by(
-            Order.created_at.asc()
-        )
-        .all()
-    )
-
-    # -----------------------------------------------------
-    # BASIC REVENUE TOTAL
-    # -----------------------------------------------------
-
-    total_revenue = sum(
-        float(order.total_amount or 0)
-        for order in delivered_orders
-    )
-
-    # -----------------------------------------------------
-    # TODAY
-    # -----------------------------------------------------
+    # =====================================================
+    # DATE RANGE
+    # =====================================================
 
     today = datetime.now().date()
-
-    today_revenue = sum(
-        float(order.total_amount or 0)
-        for order in delivered_orders
-        if (
-            order.created_at
-            and order.created_at.date() == today
-        )
-    )
-
-    # -----------------------------------------------------
-    # CURRENT MONTH
-    # -----------------------------------------------------
 
     current_year = today.year
     current_month = today.month
 
-    monthly_revenue_value = sum(
-        float(order.total_amount or 0)
-        for order in delivered_orders
-        if (
-            order.created_at
-            and order.created_at.year == current_year
-            and order.created_at.month == current_month
-        )
-    )
-
-    # -----------------------------------------------------
-    # CURRENT QUARTER
-    # -----------------------------------------------------
-
     current_quarter = (
-        (today.month - 1) // 3
+        (current_month - 1) // 3
     ) + 1
 
     quarter_start_month = (
         (current_quarter - 1) * 3
     ) + 1
 
-    quarter_revenue = sum(
-        float(order.total_amount or 0)
-        for order in delivered_orders
-        if (
-            order.created_at
-            and order.created_at.year == current_year
-            and quarter_start_month
-            <= order.created_at.month
-            <= quarter_start_month + 2
+    # =====================================================
+    # BASIC REVENUE
+    #
+    # BEFORE:
+    #   Load every delivered order into Python
+    #   and calculate using loops.
+    #
+    # NOW:
+    #   MySQL performs SUM().
+    # =====================================================
+
+    total_revenue = (
+        db.session.query(
+            func.coalesce(
+                func.sum(Order.total_amount),
+                0
+            )
         )
+        .filter(
+            Order.status == "DELIVERED"
+        )
+        .scalar()
+        or 0
     )
 
-    # -----------------------------------------------------
+    today_revenue = (
+        db.session.query(
+            func.coalesce(
+                func.sum(Order.total_amount),
+                0
+            )
+        )
+        .filter(
+            Order.status == "DELIVERED",
+            func.date(Order.created_at) == today
+        )
+        .scalar()
+        or 0
+    )
+
+    monthly_revenue_value = (
+        db.session.query(
+            func.coalesce(
+                func.sum(Order.total_amount),
+                0
+            )
+        )
+        .filter(
+            Order.status == "DELIVERED",
+            func.year(Order.created_at) == current_year,
+            func.month(Order.created_at) == current_month
+        )
+        .scalar()
+        or 0
+    )
+
+    quarter_revenue = (
+        db.session.query(
+            func.coalesce(
+                func.sum(Order.total_amount),
+                0
+            )
+        )
+        .filter(
+            Order.status == "DELIVERED",
+            func.year(Order.created_at) == current_year,
+            func.month(Order.created_at) >= quarter_start_month,
+            func.month(Order.created_at) <= quarter_start_month + 2
+        )
+        .scalar()
+        or 0
+    )
+
+    # =====================================================
     # DAILY REVENUE
-    # -----------------------------------------------------
+    # =====================================================
 
-    daily_data = {}
+    daily_rows = (
+        db.session.query(
+            func.date(
+                Order.created_at
+            ).label("revenue_date"),
 
-    for order in delivered_orders:
-
-        if not order.created_at:
-            continue
-
-        date_key = (
-            order.created_at.date()
+            func.sum(
+                Order.total_amount
+            ).label("revenue")
         )
-
-        if date_key not in daily_data:
-
-            daily_data[date_key] = {
-                "label": order.created_at.strftime(
-                    "%d %b"
-                ),
-                "revenue": 0
-            }
-
-        daily_data[date_key]["revenue"] += (
-            float(order.total_amount or 0)
+        .filter(
+            Order.status == "DELIVERED"
         )
+        .group_by(
+            func.date(Order.created_at)
+        )
+        .order_by(
+            func.date(Order.created_at).asc()
+        )
+        .all()
+    )
 
     daily_revenue = [
         {
-            "label": data["label"],
+            "label": row.revenue_date.strftime("%d %b"),
             "revenue": round(
-                data["revenue"],
+                float(row.revenue or 0),
                 2
             )
         }
-        for key, data in sorted(
-            daily_data.items()
-        )
+        for row in daily_rows[-14:]
     ]
 
-    # Latest 14 revenue days
-    daily_revenue = daily_revenue[-14:]
-
-    # -----------------------------------------------------
+    # =====================================================
     # MONTHLY REVENUE
-    # -----------------------------------------------------
+    # =====================================================
 
-    monthly_data = {}
+    monthly_rows = (
+        db.session.query(
+            func.year(
+                Order.created_at
+            ).label("revenue_year"),
 
-    for order in delivered_orders:
+            func.month(
+                Order.created_at
+            ).label("revenue_month"),
 
-        if not order.created_at:
-            continue
-
-        month_key = (
-            order.created_at.strftime(
-                "%Y-%m"
-            )
+            func.sum(
+                Order.total_amount
+            ).label("revenue")
         )
-
-        if month_key not in monthly_data:
-
-            monthly_data[month_key] = {
-                "label": order.created_at.strftime(
-                    "%b %Y"
-                ),
-                "revenue": 0
-            }
-
-        monthly_data[month_key]["revenue"] += (
-            float(order.total_amount or 0)
+        .filter(
+            Order.status == "DELIVERED"
         )
+        .group_by(
+            func.year(Order.created_at),
+            func.month(Order.created_at)
+        )
+        .order_by(
+            func.year(Order.created_at).asc(),
+            func.month(Order.created_at).asc()
+        )
+        .all()
+    )
 
     monthly_revenue = [
         {
-            "label": data["label"],
+            "label": datetime(
+                int(row.revenue_year),
+                int(row.revenue_month),
+                1
+            ).strftime("%b %Y"),
+
             "revenue": round(
-                data["revenue"],
+                float(row.revenue or 0),
                 2
             )
         }
-        for key, data in sorted(
-            monthly_data.items()
-        )
+        for row in monthly_rows[-12:]
     ]
 
-    # Latest 12 months
-    monthly_revenue = monthly_revenue[-12:]
-
-    # -----------------------------------------------------
+    # =====================================================
     # QUARTERLY REVENUE
-    # -----------------------------------------------------
+    # =====================================================
 
-    quarterly_data = {}
+    quarterly_rows = (
+        db.session.query(
+            func.year(
+                Order.created_at
+            ).label("revenue_year"),
 
-    for order in delivered_orders:
+            func.quarter(
+                Order.created_at
+            ).label("revenue_quarter"),
 
-        if not order.created_at:
-            continue
-
-        order_year = order.created_at.year
-
-        order_quarter = (
-            (order.created_at.month - 1) // 3
-        ) + 1
-
-        quarter_key = (
-            order_year,
-            order_quarter
+            func.sum(
+                Order.total_amount
+            ).label("revenue")
         )
-
-        if quarter_key not in quarterly_data:
-
-            quarterly_data[quarter_key] = {
-                "label": (
-                    f"Q{order_quarter} "
-                    f"{order_year}"
-                ),
-                "revenue": 0
-            }
-
-        quarterly_data[quarter_key]["revenue"] += (
-            float(order.total_amount or 0)
+        .filter(
+            Order.status == "DELIVERED"
         )
+        .group_by(
+            func.year(Order.created_at),
+            func.quarter(Order.created_at)
+        )
+        .order_by(
+            func.year(Order.created_at).asc(),
+            func.quarter(Order.created_at).asc()
+        )
+        .all()
+    )
 
     quarterly_revenue = [
         {
-            "label": data["label"],
+            "label": (
+                f"Q{int(row.revenue_quarter)} "
+                f"{int(row.revenue_year)}"
+            ),
+
             "revenue": round(
-                data["revenue"],
+                float(row.revenue or 0),
                 2
             )
         }
-        for key, data in sorted(
-            quarterly_data.items()
-        )
+        for row in quarterly_rows[-8:]
     ]
 
-    # Latest 8 quarters
-    quarterly_revenue = quarterly_revenue[-8:]
-
-    # -----------------------------------------------------
+    # =====================================================
     # CATEGORY REVENUE
-    # -----------------------------------------------------
+    #
+    # MySQL calculates revenue and quantity.
+    # =====================================================
 
-    category_data = {}
+    category_rows = (
+        db.session.query(
+            Category.id.label("category_id"),
 
-    for order in delivered_orders:
+            Category.name.label("category_name"),
 
-        for item in order.items:
+            Category.image_key.label("image_key"),
 
-            product = item.product
+            func.sum(
+                OrderItem.total_price
+            ).label("revenue"),
 
-            if not product:
-                continue
-
-            category = product.category
-
-            if not category:
-                continue
-
-            category_id = category.id
-
-            if category_id not in category_data:
-
-                category_data[category_id] = {
-                    "id": category.id,
-                    "name": category.name,
-                    "image_url": url_for(
-                        "admin.category_image",
-                        category_id=category.id
-                    )
-                    if category.image_key
-                    else None,
-                    "revenue": 0,
-                    "items": 0
-                }
-
-            category_data[category_id]["revenue"] += (
-                float(item.total_price or 0)
-            )
-
-            category_data[category_id]["items"] += (
-                int(item.quantity or 0)
-            )
-
-    category_revenue = sorted(
-        category_data.values(),
-        key=lambda item: item["revenue"],
-        reverse=True
+            func.sum(
+                OrderItem.quantity
+            ).label("items")
+        )
+        .join(
+            Product,
+            Product.category_id == Category.id
+        )
+        .join(
+            OrderItem,
+            OrderItem.product_id == Product.id
+        )
+        .join(
+            Order,
+            Order.id == OrderItem.order_id
+        )
+        .filter(
+            Order.status == "DELIVERED"
+        )
+        .group_by(
+            Category.id,
+            Category.name,
+            Category.image_key
+        )
+        .order_by(
+            func.sum(
+                OrderItem.total_price
+            ).desc()
+        )
+        .all()
     )
 
-    for category in category_revenue:
+    category_revenue = []
 
-        category["revenue"] = round(
-            category["revenue"],
-            2
-        )
+    for row in category_rows:
 
-    # -----------------------------------------------------
-    # SUBCATEGORY REVENUE
-    # -----------------------------------------------------
-    #
-    # All subcategories are kept in ONE ranking.
-    #
-    # They are NOT grouped under categories.
-    #
-    # Each row contains:
-    # - image
-    # - subcategory
-    # - parent category
-    # - revenue
-    # - quantity sold
-    # - most sold product
-    # -----------------------------------------------------
-
-    subcategory_data = {}
-
-    for order in delivered_orders:
-
-        for item in order.items:
-
-            product = item.product
-
-            if not product:
-                continue
-
-            subcategory = (
-                product.subcategory
-            )
-
-            if not subcategory:
-                continue
-
-            subcategory_id = (
-                subcategory.id
-            )
-
-            if (
-                subcategory_id
-                not in subcategory_data
-            ):
-
-                parent_category = (
-                    subcategory.category
-                )
-
-                subcategory_data[
-                    subcategory_id
-                ] = {
-                    "id": subcategory.id,
-                    "name": subcategory.name,
-                    "image_url": url_for(
-                        "admin.subcategory_image",
-                        subcategory_id=subcategory.id
-                    )
-                    if subcategory.image_key
-                    else None,
-                    "category_name": (
-                        parent_category.name
-                        if parent_category
-                        else "—"
-                    ),
-                    "revenue": 0,
-                    "items": 0,
-                    "products": {}
-                }
-
-            subcategory_data[
-                subcategory_id
-            ]["revenue"] += (
-                float(item.total_price or 0)
-            )
-
-            subcategory_data[
-                subcategory_id
-            ]["items"] += (
-                int(item.quantity or 0)
-            )
-
-            # -------------------------------------------------
-            # MOST SOLD PRODUCT
-            # -------------------------------------------------
-
-            product_id = (
-                product.id
-            )
-
-            if (
-                product_id
-                not in subcategory_data[
-                    subcategory_id
-                ]["products"]
-            ):
-
-                image = (
-                    ProductImage.query
-                    .filter(
-                        ProductImage.product_id
-                        == product.id
-                    )
-                    .order_by(
-                        ProductImage.is_primary.desc(),
-                        ProductImage.display_order.asc(),
-                        ProductImage.id.asc()
-                    )
-                    .first()
-                )
-
-                subcategory_data[
-                    subcategory_id
-                ]["products"][product_id] = {
-                    "id": product.id,
-                    "name": (
-                        item.product_name
-                        or product.name
-                    ),
-                    "quantity": 0,
-                    "image_url": (
-                        url_for(
-                            "admin.product_image_view",
-                            product_id=product.id,
-                            image_id=image.id
-                        )
-                        + f"?v={image.id}"
-                    )
-                    if image
-                    else None
-                }
-
-            subcategory_data[
-                subcategory_id
-            ]["products"][
-                product_id
-            ]["quantity"] += (
-                int(item.quantity or 0)
-            )
-
-    # -----------------------------------------------------
-    # PREPARE SUBCATEGORY LIST
-    # -----------------------------------------------------
-
-    subcategory_revenue = []
-
-    for data in subcategory_data.values():
-
-        products = list(
-            data["products"].values()
-        )
-
-        products.sort(
-            key=lambda product: product["quantity"],
-            reverse=True
-        )
-
-        most_sold_product = (
-            products[0]
-            if products
-            else None
-        )
-
-        subcategory_revenue.append(
+        category_revenue.append(
             {
-                "id": data["id"],
-                "name": data["name"],
-                "image_url": data["image_url"],
-                "category_name": data[
-                    "category_name"
-                ],
+                "id": row.category_id,
+
+                "name": row.category_name,
+
+                "image_url": (
+                    url_for(
+                        "admin.category_image",
+                        category_id=row.category_id
+                    )
+                    if row.image_key
+                    else None
+                ),
+
                 "revenue": round(
-                    data["revenue"],
+                    float(row.revenue or 0),
                     2
                 ),
-                "items": data["items"],
-                "most_sold_product": (
-                    most_sold_product
+
+                "items": int(
+                    row.items or 0
                 )
             }
         )
 
-    subcategory_revenue.sort(
-        key=lambda item: item["revenue"],
-        reverse=True
+    # =====================================================
+    # SUBCATEGORY REVENUE
+    #
+    # Query 1:
+    # Revenue + quantity per subcategory.
+    # =====================================================
+
+    subcategory_rows = (
+        db.session.query(
+            Subcategory.id.label(
+                "subcategory_id"
+            ),
+
+            Subcategory.name.label(
+                "subcategory_name"
+            ),
+
+            Subcategory.image_key.label(
+                "image_key"
+            ),
+
+            Category.name.label(
+                "category_name"
+            ),
+
+            func.sum(
+                OrderItem.total_price
+            ).label("revenue"),
+
+            func.sum(
+                OrderItem.quantity
+            ).label("items")
+        )
+        .join(
+            Product,
+            Product.subcategory_id == Subcategory.id
+        )
+        .join(
+            OrderItem,
+            OrderItem.product_id == Product.id
+        )
+        .join(
+            Order,
+            Order.id == OrderItem.order_id
+        )
+        .join(
+            Category,
+            Category.id == Subcategory.category_id
+        )
+        .filter(
+            Order.status == "DELIVERED"
+        )
+        .group_by(
+            Subcategory.id,
+            Subcategory.name,
+            Subcategory.image_key,
+            Category.name
+        )
+        .order_by(
+            func.sum(
+                OrderItem.total_price
+            ).desc()
+        )
+        .all()
     )
 
-    # -----------------------------------------------------
-    # SUBCATEGORY GRAPH DATA
-    # -----------------------------------------------------
+    # =====================================================
+    # MOST SOLD PRODUCT PER SUBCATEGORY
+    #
+    # Instead of loading every order/item into Python,
+    # MySQL calculates product quantities.
+    # =====================================================
 
-    subcategory_graph = [
-        {
-            "label": item["name"],
-            "revenue": item["revenue"]
-        }
-        for item in subcategory_revenue
+    product_rows = (
+        db.session.query(
+            Subcategory.id.label(
+                "subcategory_id"
+            ),
+
+            Product.id.label(
+                "product_id"
+            ),
+
+            Product.name.label(
+                "product_name"
+            ),
+
+            func.sum(
+                OrderItem.quantity
+            ).label("quantity")
+        )
+        .join(
+            Product,
+            Product.subcategory_id == Subcategory.id
+        )
+        .join(
+            OrderItem,
+            OrderItem.product_id == Product.id
+        )
+        .join(
+            Order,
+            Order.id == OrderItem.order_id
+        )
+        .filter(
+            Order.status == "DELIVERED"
+        )
+        .group_by(
+            Subcategory.id,
+            Product.id,
+            Product.name
+        )
+        .order_by(
+            Subcategory.id.asc(),
+            func.sum(
+                OrderItem.quantity
+            ).desc(),
+            Product.id.asc()
+        )
+        .all()
+    )
+
+    # First row for each subcategory is the
+    # most sold product because SQL already
+    # sorted by quantity DESC.
+
+    most_sold_products = {}
+
+    for row in product_rows:
+
+        if row.subcategory_id in most_sold_products:
+            continue
+
+        most_sold_products[
+            row.subcategory_id
+        ] = row
+
+    # =====================================================
+    # GET ALL REQUIRED PRODUCT IMAGES IN ONE QUERY
+    #
+    # BEFORE:
+    # ProductImage.query.first()
+    # happened inside the order/item loops.
+    #
+    # NOW:
+    # One query for all required products.
+    # =====================================================
+
+    product_ids = [
+        row.product_id
+        for row in most_sold_products.values()
     ]
 
-    # -----------------------------------------------------
-    # CATEGORY GRAPH DATA
-    # -----------------------------------------------------
+    primary_images = {}
+
+    if product_ids:
+
+        image_rows = (
+            ProductImage.query
+            .filter(
+                ProductImage.product_id.in_(
+                    product_ids
+                )
+            )
+            .order_by(
+                ProductImage.product_id.asc(),
+                ProductImage.is_primary.desc(),
+                ProductImage.display_order.asc(),
+                ProductImage.id.asc()
+            )
+            .all()
+        )
+
+        for image in image_rows:
+
+            if image.product_id not in primary_images:
+
+                primary_images[
+                    image.product_id
+                ] = image
+
+    # =====================================================
+    # BUILD SUBCATEGORY RESULT
+    # =====================================================
+
+    subcategory_revenue = []
+
+    for row in subcategory_rows:
+
+        product_row = most_sold_products.get(
+            row.subcategory_id
+        )
+
+        product_data = None
+
+        if product_row:
+
+            image = primary_images.get(
+                product_row.product_id
+            )
+
+            product_data = {
+                "id": product_row.product_id,
+
+                "name": product_row.product_name,
+
+                "quantity": int(
+                    product_row.quantity or 0
+                ),
+
+                "image_url": (
+                    url_for(
+                        "admin.product_image_view",
+                        product_id=product_row.product_id,
+                        image_id=image.id
+                    )
+                    + f"?v={image.id}"
+                    if image
+                    else None
+                )
+            }
+
+        subcategory_revenue.append(
+            {
+                "id": row.subcategory_id,
+
+                "name": row.subcategory_name,
+
+                "image_url": (
+                    url_for(
+                        "admin.subcategory_image",
+                        subcategory_id=row.subcategory_id
+                    )
+                    if row.image_key
+                    else None
+                ),
+
+                "category_name": (
+                    row.category_name
+                    if row.category_name
+                    else "—"
+                ),
+
+                "revenue": round(
+                    float(row.revenue or 0),
+                    2
+                ),
+
+                "items": int(
+                    row.items or 0
+                ),
+
+                "most_sold_product": product_data
+            }
+        )
+
+    # =====================================================
+    # GRAPH DATA
+    # =====================================================
 
     category_graph = [
         {
@@ -5438,9 +5500,17 @@ def revenue():
         for item in category_revenue
     ]
 
-    # -----------------------------------------------------
-    # RENDER REVENUE PAGE
-    # -----------------------------------------------------
+    subcategory_graph = [
+        {
+            "label": item["name"],
+            "revenue": item["revenue"]
+        }
+        for item in subcategory_revenue
+    ]
+
+    # =====================================================
+    # RENDER
+    # =====================================================
 
     return render_template(
         "admin/revenue.html",
@@ -5448,22 +5518,22 @@ def revenue():
         section=section,
 
         total_revenue=round(
-            total_revenue,
+            float(total_revenue),
             2
         ),
 
         today_revenue=round(
-            today_revenue,
+            float(today_revenue),
             2
         ),
 
         monthly_revenue_value=round(
-            monthly_revenue_value,
+            float(monthly_revenue_value),
             2
         ),
 
         quarter_revenue=round(
-            quarter_revenue,
+            float(quarter_revenue),
             2
         ),
 
@@ -5481,7 +5551,6 @@ def revenue():
 
         subcategory_graph=subcategory_graph
     )
-
 # =========================================================
 # TRAFFIC MANAGEMENT
 # =========================================================
@@ -5489,197 +5558,178 @@ def revenue():
 @admin_bp.route("/traffic")
 def traffic():
 
-    if "admin_id" not in session:
-        return redirect(
-            url_for("admin.login")
-        )
+    from datetime import datetime, timedelta
 
-    from datetime import datetime
-    from collections import defaultdict
+    # =====================================================
+    # BASIC VISITOR STATISTICS
+    # =====================================================
 
-
-    # -----------------------------------------------------
-    # GET ALL TRAFFIC EVENTS
-    # -----------------------------------------------------
-
-    events = (
-        TrafficEvent.query
-        .order_by(
-            TrafficEvent.created_at.asc()
-        )
-        .all()
-    )
-
-
-    # -----------------------------------------------------
-    # BASIC VISITOR / SESSION STATISTICS
-    # -----------------------------------------------------
-
-    visitor_users = defaultdict(set)
-
-    session_users = defaultdict(set)
-
-    session_times = defaultdict(list)
-
-
-    for event in events:
-
-        if not event.visitor_id:
-            continue
-
-        if event.user_id:
-
-            visitor_users[
-                event.visitor_id
-            ].add(
-                event.user_id
+    total_visitors = (
+        db.session.query(
+            func.count(
+                func.distinct(
+                    TrafficEvent.visitor_id
+                )
             )
-
-        if event.session_id:
-
-            if event.user_id:
-
-                session_users[
-                    event.session_id
-                ].add(
-                    event.user_id
-                )
-
-            if event.created_at:
-
-                session_times[
-                    event.session_id
-                ].append(
-                    event.created_at
-                )
-
-
-    # -----------------------------------------------------
-    # TOTAL VISITORS
-    # -----------------------------------------------------
-
-    total_visitors = len(
-        {
-            event.visitor_id
-            for event in events
-            if event.visitor_id
-        }
+        )
+        .filter(
+            TrafficEvent.visitor_id.isnot(None)
+        )
+        .scalar()
+        or 0
     )
 
-
-    # -----------------------------------------------------
-    # LOGGED-IN / GUEST VISITORS
-    # -----------------------------------------------------
-
-    logged_in_visitors = len(
-        {
-            visitor_id
-            for visitor_id, users
-            in visitor_users.items()
-            if users
-        }
+    logged_in_visitors = (
+        db.session.query(
+            func.count(
+                func.distinct(
+                    TrafficEvent.visitor_id
+                )
+            )
+        )
+        .filter(
+            TrafficEvent.visitor_id.isnot(None),
+            TrafficEvent.user_id.isnot(None)
+        )
+        .scalar()
+        or 0
     )
-
 
     guest_visitors = max(
         total_visitors - logged_in_visitors,
         0
     )
 
-
-    # -----------------------------------------------------
-    # TOTAL SESSIONS
-    # -----------------------------------------------------
-
-    total_sessions = len(
-        {
-            event.session_id
-            for event in events
-            if event.session_id
-        }
+    total_sessions = (
+        db.session.query(
+            func.count(
+                func.distinct(
+                    TrafficEvent.session_id
+                )
+            )
+        )
+        .filter(
+            TrafficEvent.session_id.isnot(None)
+        )
+        .scalar()
+        or 0
     )
 
-
     # =====================================================
-    # SESSION DURATION
+    # AVERAGE SESSION DURATION
+    #
+    # MySQL performs the complete calculation.
+    # Flask receives only ONE value.
     # =====================================================
 
-    session_durations = []
+    session_stats = (
+        db.session.query(
+            TrafficEvent.session_id,
 
+            func.min(
+                TrafficEvent.created_at
+            ).label("start_time"),
 
-    for session_id, timestamps in session_times.items():
+            func.max(
+                TrafficEvent.created_at
+            ).label("end_time"),
 
-        if len(timestamps) < 2:
-            continue
-
-        start_time = min(timestamps)
-
-        end_time = max(timestamps)
-
-        duration = (
-            end_time - start_time
-        ).total_seconds()
-
-
-        # Ignore unrealistic sessions
-        if 0 <= duration <= 86400:
-
-            session_durations.append(
-                duration
+            func.count(
+                TrafficEvent.id
+            ).label("event_count")
+        )
+        .filter(
+            TrafficEvent.session_id.isnot(None),
+            TrafficEvent.created_at.isnot(None)
+        )
+        .group_by(
+            TrafficEvent.session_id
+        )
+        .having(
+            func.count(
+                TrafficEvent.id
+            ) >= 2
+        )
+        .having(
+            func.timestampdiff(
+                literal_column("SECOND"),
+                func.min(
+                    TrafficEvent.created_at
+                ),
+                func.max(
+                    TrafficEvent.created_at
+                )
+            ).between(
+                0,
+                86400
             )
-
+        )
+        .subquery()
+    )
 
     average_session_seconds = (
-        sum(session_durations)
-        / len(session_durations)
-        if session_durations
-        else 0
+        db.session.query(
+            func.avg(
+                func.timestampdiff(
+                    literal_column("SECOND"),
+                    session_stats.c.start_time,
+                    session_stats.c.end_time
+                )
+            )
+        )
+        .scalar()
+        or 0
     )
-
 
     average_session_minutes = round(
-        average_session_seconds / 60,
+        float(
+            average_session_seconds
+        ) / 60,
         1
     )
-
 
     # =====================================================
     # HOURLY TRAFFIC
     # =====================================================
 
-    hourly_visitors = defaultdict(set)
+    hourly_rows = (
+        db.session.query(
+            func.hour(
+                TrafficEvent.created_at
+            ).label("hour"),
 
-
-    for event in events:
-
-        if (
-            event.created_at
-            and event.visitor_id
-        ):
-
-            hourly_visitors[
-                event.created_at.hour
-            ].add(
-                event.visitor_id
+            func.count(
+                func.distinct(
+                    TrafficEvent.visitor_id
+                )
+            ).label("visitors")
+        )
+        .filter(
+            TrafficEvent.created_at.isnot(None),
+            TrafficEvent.visitor_id.isnot(None)
+        )
+        .group_by(
+            func.hour(
+                TrafficEvent.created_at
             )
+        )
+        .all()
+    )
 
+    hourly_map = {
+        int(row.hour): int(row.visitors or 0)
+        for row in hourly_rows
+    }
 
     hourly_labels = [
         f"{hour:02d}:00"
         for hour in range(24)
     ]
 
-
     hourly_values = [
-        len(
-            hourly_visitors.get(
-                hour,
-                set()
-            )
-        )
+        hourly_map.get(hour, 0)
         for hour in range(24)
     ]
-
 
     peak_hour_index = (
         max(
@@ -5687,125 +5737,125 @@ def traffic():
             key=lambda hour:
                 hourly_values[hour]
         )
-        if events
+        if total_visitors
         else 0
     )
-
 
     peak_hour = (
         f"{peak_hour_index:02d}:00"
     )
 
-
     peak_hour_visitors = (
         hourly_values[
             peak_hour_index
         ]
-        if events
+        if total_visitors
         else 0
     )
-
 
     # =====================================================
     # DAILY TRAFFIC
     # =====================================================
 
-    daily_visitors = defaultdict(set)
+    daily_rows = (
+        db.session.query(
+            func.date(
+                TrafficEvent.created_at
+            ).label("traffic_date"),
 
-
-    for event in events:
-
-        if (
-            event.created_at
-            and event.visitor_id
-        ):
-
-            day_key = (
-                event.created_at.date()
+            func.count(
+                func.distinct(
+                    TrafficEvent.visitor_id
+                )
+            ).label("visitors")
+        )
+        .filter(
+            TrafficEvent.created_at.isnot(None),
+            TrafficEvent.visitor_id.isnot(None)
+        )
+        .group_by(
+            func.date(
+                TrafficEvent.created_at
             )
+        )
+        .order_by(
+            func.date(
+                TrafficEvent.created_at
+            ).asc()
+        )
+        .all()
+    )
 
-            daily_visitors[
-                day_key
-            ].add(
-                event.visitor_id
-            )
-
-
-    daily_keys = sorted(
-        daily_visitors.keys()
-    )[-14:]
-
+    daily_rows = daily_rows[-14:]
 
     daily_labels = [
-        day.strftime("%d %b")
-        for day in daily_keys
+        row.traffic_date.strftime("%d %b")
+        for row in daily_rows
     ]
-
 
     daily_values = [
-        len(
-            daily_visitors[day]
-        )
-        for day in daily_keys
+        int(row.visitors or 0)
+        for row in daily_rows
     ]
-
 
     # =====================================================
     # MONTHLY TRAFFIC
     # =====================================================
 
-    monthly_visitors = defaultdict(set)
+    monthly_rows = (
+        db.session.query(
+            func.year(
+                TrafficEvent.created_at
+            ).label("traffic_year"),
 
+            func.month(
+                TrafficEvent.created_at
+            ).label("traffic_month"),
 
-    for event in events:
-
-        if (
-            event.created_at
-            and event.visitor_id
-        ):
-
-            month_key = (
-                event.created_at.strftime(
-                    "%Y-%m"
+            func.count(
+                func.distinct(
+                    TrafficEvent.visitor_id
                 )
-            )
-
-            monthly_visitors[
-                month_key
-            ].add(
-                event.visitor_id
-            )
-
-
-    monthly_keys = sorted(
-        monthly_visitors.keys()
-    )[-6:]
-
-
-    monthly_labels = []
-
-
-    for month_key in monthly_keys:
-
-        month_date = datetime.strptime(
-            month_key,
-            "%Y-%m"
+            ).label("visitors")
         )
-
-        monthly_labels.append(
-            month_date.strftime(
-                "%b %Y"
+        .filter(
+            TrafficEvent.created_at.isnot(None),
+            TrafficEvent.visitor_id.isnot(None)
+        )
+        .group_by(
+            func.year(
+                TrafficEvent.created_at
+            ),
+            func.month(
+                TrafficEvent.created_at
             )
         )
-
-
-    monthly_values = [
-        len(
-            monthly_visitors[month]
+        .order_by(
+            func.year(
+                TrafficEvent.created_at
+            ).asc(),
+            func.month(
+                TrafficEvent.created_at
+            ).asc()
         )
-        for month in monthly_keys
+        .all()
+    )
+
+    monthly_rows = monthly_rows[-6:]
+
+    monthly_labels = [
+        datetime(
+            int(row.traffic_year),
+            int(row.traffic_month),
+            1
+        ).strftime("%b %Y")
+        for row in monthly_rows
     ]
 
+    monthly_values = [
+        int(row.visitors or 0)
+        for row in monthly_rows
+    ]
 
     # =====================================================
     # LOGGED-IN VS GUEST
@@ -5816,66 +5866,141 @@ def traffic():
         "Guest"
     ]
 
-
     visitor_type_values = [
         logged_in_visitors,
         guest_visitors
     ]
 
+    # =====================================================
+    # TOTAL EVENT VIEWS
+    #
+    # MySQL performs the counting.
+    # =====================================================
+
+    event_counts = dict(
+        db.session.query(
+            TrafficEvent.event_type,
+            func.count(TrafficEvent.id)
+        )
+        .group_by(
+            TrafficEvent.event_type
+        )
+        .all()
+    )
+
+    total_page_views = int(
+        event_counts.get(
+            "page_view",
+            0
+        )
+    )
+
+    total_product_views = int(
+        event_counts.get(
+            "product_view",
+            0
+        )
+    )
+
+    total_category_views = int(
+        event_counts.get(
+            "category_view",
+            0
+        )
+    )
+
+    total_subcategory_views = int(
+        event_counts.get(
+            "subcategory_view",
+            0
+        )
+    )
 
     # =====================================================
-    # PRODUCT VIEWS
+    # TOP PRODUCTS
+    #
+    # MySQL calculates:
+    # - total views
+    # - unique visitors
+    #
+    # Only the top 10 are returned.
     # =====================================================
 
-    product_counts = defaultdict(int)
+    top_product_rows = (
+        db.session.query(
+            TrafficEvent.product_id.label(
+                "product_id"
+            ),
 
-    product_visitors = defaultdict(set)
+            func.count(
+                TrafficEvent.id
+            ).label("views"),
 
-
-    for event in events:
-
-        if (
-            event.event_type
-            == "product_view"
-            and event.product_id
-        ):
-
-            product_counts[
-                event.product_id
-            ] += 1
-
-            if event.visitor_id:
-
-                product_visitors[
-                    event.product_id
-                ].add(
-                    event.visitor_id
+            func.count(
+                func.distinct(
+                    TrafficEvent.visitor_id
                 )
+            ).label("unique_visitors")
+        )
+        .filter(
+            TrafficEvent.event_type
+            == "product_view",
 
+            TrafficEvent.product_id.isnot(None)
+        )
+        .group_by(
+            TrafficEvent.product_id
+        )
+        .order_by(
+            func.count(
+                TrafficEvent.id
+            ).desc()
+        )
+        .limit(10)
+        .all()
+    )
 
-    top_product_ids = sorted(
-        product_counts,
-        key=product_counts.get,
-        reverse=True
-    )[:10]
+    top_product_ids = [
+        row.product_id
+        for row in top_product_rows
+    ]
 
+    products_by_id = {}
+
+    if top_product_ids:
+
+        products = (
+            Product.query
+            .options(
+                joinedload(
+                    Product.images
+                )
+            )
+            .filter(
+                Product.id.in_(
+                    top_product_ids
+                )
+            )
+            .all()
+        )
+
+        products_by_id = {
+            product.id: product
+            for product in products
+        }
 
     top_products = []
 
+    for row in top_product_rows:
 
-    for product_id in top_product_ids:
-
-        product = db.session.get(
-            Product,
-            product_id
+        product = products_by_id.get(
+            row.product_id
         )
 
         if not product:
             continue
 
-
         image = None
-
 
         if product.images:
 
@@ -5888,22 +6013,18 @@ def traffic():
                 product.images[0]
             )
 
-
         top_products.append(
             {
                 "id": product.id,
 
                 "name": product.name,
 
-                "views": product_counts[
-                    product_id
-                ],
+                "views": int(
+                    row.views or 0
+                ),
 
-                "unique_visitors": len(
-                    product_visitors.get(
-                        product_id,
-                        set()
-                    )
+                "unique_visitors": int(
+                    row.unique_visitors or 0
                 ),
 
                 "image_id": (
@@ -5914,207 +6035,176 @@ def traffic():
             }
         )
 
-
     # =====================================================
-    # CATEGORY VIEWS
+    # CATEGORY TRAFFIC
     # =====================================================
 
-    category_counts = defaultdict(int)
+    category_rows = (
+        db.session.query(
+            Category.id.label(
+                "category_id"
+            ),
 
-    category_visitors = defaultdict(set)
+            Category.name.label(
+                "category_name"
+            ),
 
+            Category.image_key.label(
+                "image_key"
+            ),
 
-    for event in events:
+            func.count(
+                TrafficEvent.id
+            ).label("views"),
 
-        if (
-            event.event_type
+            func.count(
+                func.distinct(
+                    TrafficEvent.visitor_id
+                )
+            ).label("unique_visitors")
+        )
+        .join(
+            TrafficEvent,
+            TrafficEvent.category_id
+            == Category.id
+        )
+        .filter(
+            TrafficEvent.event_type
             == "category_view"
-            and event.category_id
-        ):
-
-            category_counts[
-                event.category_id
-            ] += 1
-
-            if event.visitor_id:
-
-                category_visitors[
-                    event.category_id
-                ].add(
-                    event.visitor_id
-                )
-
-
-    top_category_ids = sorted(
-        category_counts,
-        key=category_counts.get,
-        reverse=True
+        )
+        .group_by(
+            Category.id,
+            Category.name,
+            Category.image_key
+        )
+        .order_by(
+            func.count(
+                TrafficEvent.id
+            ).desc()
+        )
+        .all()
     )
 
+    category_traffic = [
+        {
+            "id": row.category_id,
 
-    category_traffic = []
+            "name": row.category_name,
 
+            "views": int(
+                row.views or 0
+            ),
 
-    for category_id in top_category_ids:
+            "unique_visitors": int(
+                row.unique_visitors or 0
+            ),
 
-        category = db.session.get(
+            "image_url": (
+                url_for(
+                    "admin.category_image",
+                    category_id=row.category_id
+                )
+                if row.image_key
+                else None
+            )
+        }
+        for row in category_rows
+    ]
+
+    # =====================================================
+    # SUBCATEGORY TRAFFIC
+    # =====================================================
+
+    subcategory_rows = (
+        db.session.query(
+            Subcategory.id.label(
+                "subcategory_id"
+            ),
+
+            Subcategory.name.label(
+                "subcategory_name"
+            ),
+
+            Subcategory.image_key.label(
+                "image_key"
+            ),
+
+            Category.name.label(
+                "category_name"
+            ),
+
+            func.count(
+                TrafficEvent.id
+            ).label("views"),
+
+            func.count(
+                func.distinct(
+                    TrafficEvent.visitor_id
+                )
+            ).label("unique_visitors")
+        )
+        .join(
+            TrafficEvent,
+            TrafficEvent.subcategory_id
+            == Subcategory.id
+        )
+        .join(
             Category,
-            category_id
+            Category.id
+            == Subcategory.category_id
         )
-
-        if not category:
-            continue
-
-
-        category_traffic.append(
-            {
-                "id": category.id,
-
-                "name": category.name,
-
-                "views": category_counts[
-                    category_id
-                ],
-
-                "unique_visitors": len(
-                    category_visitors.get(
-                        category_id,
-                        set()
-                    )
-                ),
-
-                "image_url": (
-                    url_for(
-                        "admin.category_image",
-                        category_id=category.id
-                    )
-                    if category.image_key
-                    else None
-                )
-            }
-        )
-
-
-    # =====================================================
-    # SUBCATEGORY VIEWS
-    # =====================================================
-
-    subcategory_counts = defaultdict(int)
-
-    subcategory_visitors = defaultdict(set)
-
-
-    for event in events:
-
-        if (
-            event.event_type
+        .filter(
+            TrafficEvent.event_type
             == "subcategory_view"
-            and event.subcategory_id
-        ):
-
-            subcategory_counts[
-                event.subcategory_id
-            ] += 1
-
-            if event.visitor_id:
-
-                subcategory_visitors[
-                    event.subcategory_id
-                ].add(
-                    event.visitor_id
-                )
-
-
-    top_subcategory_ids = sorted(
-        subcategory_counts,
-        key=subcategory_counts.get,
-        reverse=True
-    )
-
-
-    subcategory_traffic = []
-
-
-    for subcategory_id in top_subcategory_ids:
-
-        subcategory = db.session.get(
-            Subcategory,
-            subcategory_id
         )
-
-        if not subcategory:
-            continue
-
-
-        subcategory_traffic.append(
-            {
-                "id": subcategory.id,
-
-                "name": subcategory.name,
-
-                "category_name": (
-                    subcategory.category.name
-                    if subcategory.category
-                    else "—"
-                ),
-
-                "views": subcategory_counts[
-                    subcategory_id
-                ],
-
-                "unique_visitors": len(
-                    subcategory_visitors.get(
-                        subcategory_id,
-                        set()
-                    )
-                ),
-
-                "image_url": (
-                    url_for(
-                        "admin.subcategory_image",
-                        subcategory_id=subcategory.id
-                    )
-                    if subcategory.image_key
-                    else None
-                )
-            }
+        .group_by(
+            Subcategory.id,
+            Subcategory.name,
+            Subcategory.image_key,
+            Category.name
         )
+        .order_by(
+            func.count(
+                TrafficEvent.id
+            ).desc()
+        )
+        .all()
+    )
 
+    subcategory_traffic = [
+        {
+            "id": row.subcategory_id,
+
+            "name": row.subcategory_name,
+
+            "category_name": (
+                row.category_name
+                if row.category_name
+                else "—"
+            ),
+
+            "views": int(
+                row.views or 0
+            ),
+
+            "unique_visitors": int(
+                row.unique_visitors or 0
+            ),
+
+            "image_url": (
+                url_for(
+                    "admin.subcategory_image",
+                    subcategory_id=row.subcategory_id
+                )
+                if row.image_key
+                else None
+            )
+        }
+        for row in subcategory_rows
+    ]
 
     # =====================================================
-    # TOTAL VIEWS
-    # =====================================================
-
-    total_page_views = sum(
-        1
-        for event in events
-        if event.event_type == "page_view"
-    )
-
-
-    total_product_views = sum(
-        1
-        for event in events
-        if event.event_type == "product_view"
-    )
-
-
-    total_category_views = sum(
-        1
-        for event in events
-        if event.event_type == "category_view"
-    )
-
-
-    total_subcategory_views = sum(
-        1
-        for event in events
-        if event.event_type == "subcategory_view"
-    )
-
-
-    # =====================================================
-    # RENDER TRAFFIC PAGE
+    # RENDER
     # =====================================================
 
     return render_template(

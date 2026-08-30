@@ -598,100 +598,47 @@ Traffic | ShopEase Admin
             </div>
 
 
-            {% if top_products %}
-
-                <div class="traffic-table-wrap">
-
-                    <table class="traffic-table">
-
-                        <thead>
-
-                            <tr>
-
-                                <th>
-                                    Product
-                                </th>
-
-                                <th>
-                                    Views
-                                </th>
-
-                                <th>
-                                    Unique Visitors
-                                </th>
-
-                            </tr>
-
-                        </thead>
-
-
-                        <tbody>
-
-                            {% for product in top_products %}
-
-                                <tr>
-
-                                    <td>
-
-                                        <div class="traffic-entity">
-
-                                            {% if product.image_id %}
-
-                                                <img
-                                                    src="{{ url_for(
-                                                        'main.product_image',
-                                                        image_id=product.image_id
-                                                    ) }}"
-                                                    class="traffic-entity-image"
-                                                    alt="{{ product.name }}"
-                                                >
-
-                                            {% else %}
-
-                                                <div class="traffic-entity-image
-                                                            d-flex
-                                                            align-items-center
-                                                            justify-content-center">
-                                                    🛍
-                                                </div>
-
-                                            {% endif %}
-
-
-                                            <div class="traffic-entity-name">
-                                                {{ product.name }}
-                                            </div>
-
-                                        </div>
-
-                                    </td>
-
-
-                                    <td class="traffic-count">
-                                        {{ product.views }}
-                                    </td>
-
-
-                                    <td class="traffic-count">
-                                        {{ product.unique_visitors }}
-                                    </td>
-
-                                </tr>
-
-                            {% endfor %}
-
-                        </tbody>
-
-                    </table>
-
+            <div id="traffic-products-content">
+                <div class="traffic-empty">
+                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                    Loading products...
                 </div>
+            </div>
 
+            {% if top_products %}
+                <div class="traffic-table-wrap">
+                    <table class="traffic-table">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Views</th>
+                                <th>Unique Visitors</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in top_products %}
+                                <tr>
+                                    <td>
+                                        <div class="traffic-entity">
+                                            {% if product.image_id %}
+                                                <img loading="lazy" src="{{ url_for('main.product_image', image_id=product.image_id) }}" class="traffic-entity-image" alt="{{ product.name }}">
+                                            {% else %}
+                                                <div class="traffic-entity-image d-flex align-items-center justify-content-center">🛍</div>
+                                            {% endif %}
+                                            <div class="traffic-entity-name">{{ product.name }}</div>
+                                        </div>
+                                    </td>
+                                    <td class="traffic-count">{{ product.views }}</td>
+                                    <td class="traffic-count">{{ product.unique_visitors }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             {% else %}
-
                 <div class="traffic-empty">
                     No product views recorded yet.
                 </div>
-
             {% endif %}
 
         </div>
@@ -723,97 +670,47 @@ Traffic | ShopEase Admin
             </div>
 
 
-            {% if category_traffic %}
-
-                <div class="traffic-table-wrap">
-
-                    <table class="traffic-table">
-
-                        <thead>
-
-                            <tr>
-
-                                <th>
-                                    Category
-                                </th>
-
-                                <th>
-                                    Views
-                                </th>
-
-                                <th>
-                                    Unique Visitors
-                                </th>
-
-                            </tr>
-
-                        </thead>
-
-
-                        <tbody>
-
-                            {% for category in category_traffic %}
-
-                                <tr>
-
-                                    <td>
-
-                                        <div class="traffic-entity">
-
-                                            {% if category.image_url %}
-
-    <img
-        src="{{ category.image_url }}"
-        class="traffic-entity-image"
-        alt="{{ category.name }}"
-    >
-
-{% else %}
-
-                                                <div class="traffic-entity-image
-                                                            d-flex
-                                                            align-items-center
-                                                            justify-content-center">
-                                                    🗂
-                                                </div>
-
-                                            {% endif %}
-
-
-                                            <div class="traffic-entity-name">
-                                                {{ category.name }}
-                                            </div>
-
-                                        </div>
-
-                                    </td>
-
-
-                                    <td class="traffic-count">
-                                        {{ category.views }}
-                                    </td>
-
-
-                                    <td class="traffic-count">
-                                        {{ category.unique_visitors }}
-                                    </td>
-
-                                </tr>
-
-                            {% endfor %}
-
-                        </tbody>
-
-                    </table>
-
+            <div id="traffic-categories-content">
+                <div class="traffic-empty">
+                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                    Loading categories...
                 </div>
+            </div>
 
+            {% if category_traffic %}
+                <div class="traffic-table-wrap">
+                    <table class="traffic-table">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Views</th>
+                                <th>Unique Visitors</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for category in category_traffic %}
+                                <tr>
+                                    <td>
+                                        <div class="traffic-entity">
+                                            {% if category.image_url %}
+                                                <img loading="lazy" src="{{ category.image_url }}" class="traffic-entity-image" alt="{{ category.name }}">
+                                            {% else %}
+                                                <div class="traffic-entity-image d-flex align-items-center justify-content-center">🗂</div>
+                                            {% endif %}
+                                            <div class="traffic-entity-name">{{ category.name }}</div>
+                                        </div>
+                                    </td>
+                                    <td class="traffic-count">{{ category.views }}</td>
+                                    <td class="traffic-count">{{ category.unique_visitors }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             {% else %}
-
                 <div class="traffic-empty">
                     No category views recorded yet.
                 </div>
-
             {% endif %}
 
         </div>
@@ -845,106 +742,49 @@ Traffic | ShopEase Admin
             </div>
 
 
-            {% if subcategory_traffic %}
-
-                <div class="traffic-table-wrap">
-
-                    <table class="traffic-table">
-
-                        <thead>
-
-                            <tr>
-
-                                <th>
-                                    Subcategory
-                                </th>
-
-                                <th>
-                                    Category
-                                </th>
-
-                                <th>
-                                    Views
-                                </th>
-
-                                <th>
-                                    Unique Visitors
-                                </th>
-
-                            </tr>
-
-                        </thead>
-
-
-                        <tbody>
-
-                            {% for subcategory in subcategory_traffic %}
-
-                                <tr>
-
-                                    <td>
-
-                                        <div class="traffic-entity">
-
-                                            {% if subcategory.image_url %}
-
-    <img
-        src="{{ subcategory.image_url }}"
-        class="traffic-entity-image"
-        alt="{{ subcategory.name }}"
-    >
-
-{% else %}
-
-                                                <div class="traffic-entity-image
-                                                            d-flex
-                                                            align-items-center
-                                                            justify-content-center">
-                                                    📁
-                                                </div>
-
-                                            {% endif %}
-
-
-                                            <div class="traffic-entity-name">
-                                                {{ subcategory.name }}
-                                            </div>
-
-                                        </div>
-
-                                    </td>
-
-
-                                    <td>
-                                        {{ subcategory.category_name }}
-                                    </td>
-
-
-                                    <td class="traffic-count">
-                                        {{ subcategory.views }}
-                                    </td>
-
-
-                                    <td class="traffic-count">
-                                        {{ subcategory.unique_visitors }}
-                                    </td>
-
-                                </tr>
-
-                            {% endfor %}
-
-                        </tbody>
-
-                    </table>
-
+            <div id="traffic-subcategories-content">
+                <div class="traffic-empty">
+                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                    Loading subcategories...
                 </div>
+            </div>
 
+            {% if subcategory_traffic %}
+                <div class="traffic-table-wrap">
+                    <table class="traffic-table">
+                        <thead>
+                            <tr>
+                                <th>Subcategory</th>
+                                <th>Category</th>
+                                <th>Views</th>
+                                <th>Unique Visitors</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for subcategory in subcategory_traffic %}
+                                <tr>
+                                    <td>
+                                        <div class="traffic-entity">
+                                            {% if subcategory.image_url %}
+                                                <img loading="lazy" src="{{ subcategory.image_url }}" class="traffic-entity-image" alt="{{ subcategory.name }}">
+                                            {% else %}
+                                                <div class="traffic-entity-image d-flex align-items-center justify-content-center">📁</div>
+                                            {% endif %}
+                                            <div class="traffic-entity-name">{{ subcategory.name }}</div>
+                                        </div>
+                                    </td>
+                                    <td>{{ subcategory.category_name }}</td>
+                                    <td class="traffic-count">{{ subcategory.views }}</td>
+                                    <td class="traffic-count">{{ subcategory.unique_visitors }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             {% else %}
-
                 <div class="traffic-empty">
                     No subcategory views recorded yet.
                 </div>
-
             {% endif %}
 
         </div>
@@ -1149,6 +989,17 @@ function showTrafficSection(
 
         createVisitorCharts();
 
+    }
+
+    // Lazy-load entity data when tab is clicked
+    var loadFunctions = {
+        "products": loadTrafficProducts,
+        "categories": loadTrafficCategories,
+        "subcategories": loadTrafficSubcategories
+    };
+
+    if (loadFunctions[section]) {
+        loadFunctions[section]();
     }
 
 }
@@ -1450,6 +1301,171 @@ function createVisitorCharts() {
    INITIAL LOAD
 ========================================================= */
 
+var trafficDataLoaded = {
+    products: false,
+    categories: false,
+    subcategories: false
+};
+
+function loadTrafficProducts() {
+    if (trafficDataLoaded.products) return;
+    trafficDataLoaded.products = true;
+
+    var container = document.getElementById("traffic-products-content");
+    if (!container) return;
+
+    fetch("/admin/traffic/products")
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            if (data.error) {
+                container.innerHTML = '<div class="traffic-empty">Unable to load product data.</div>';
+                return;
+            }
+
+            var products = data.top_products || [];
+            if (products.length === 0) {
+                container.innerHTML = '<div class="traffic-empty">No product views recorded yet.</div>';
+                return;
+            }
+
+            var html = '';
+            html += '<div class="traffic-table-wrap">';
+            html += '<table class="traffic-table">';
+            html += '<thead><tr><th>Product</th><th>Views</th><th>Unique Visitors</th></tr></thead>';
+            html += '<tbody>';
+
+            for (var i = 0; i < products.length; i++) {
+                var p = products[i];
+                var imgUrl = p.image_id ? "/admin/traffic/product-image/" + p.image_id : null;
+
+                html += '<tr><td><div class="traffic-entity">';
+                if (imgUrl) {
+                    html += '<img src="' + imgUrl + '" class="traffic-entity-image" alt="' + p.name + '" loading="lazy">';
+                } else {
+                    html += '<div class="traffic-entity-image d-flex align-items-center justify-content-center">🛍</div>';
+                }
+                html += '<div class="traffic-entity-name">' + p.name + '</div>';
+                html += '</div></td>';
+                html += '<td class="traffic-count">' + p.views + '</td>';
+                html += '<td class="traffic-count">' + p.unique_visitors + '</td>';
+                html += '</tr>';
+            }
+
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        })
+        .catch(function() {
+            container.innerHTML = '<div class="traffic-empty">Unable to load product data.</div>';
+        });
+}
+
+function loadTrafficCategories() {
+    if (trafficDataLoaded.categories) return;
+    trafficDataLoaded.categories = true;
+
+    var container = document.getElementById("traffic-categories-content");
+    if (!container) return;
+
+    fetch("/admin/traffic/categories")
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            if (data.error) {
+                container.innerHTML = '<div class="traffic-empty">Unable to load category data.</div>';
+                return;
+            }
+
+            var categories = data.category_traffic || [];
+            if (categories.length === 0) {
+                container.innerHTML = '<div class="traffic-empty">No category views recorded yet.</div>';
+                return;
+            }
+
+            var html = '';
+            html += '<div class="traffic-table-wrap">';
+            html += '<table class="traffic-table">';
+            html += '<thead><tr><th>Category</th><th>Views</th><th>Unique Visitors</th></tr></thead>';
+            html += '<tbody>';
+
+            for (var i = 0; i < categories.length; i++) {
+                var c = categories[i];
+                html += '<tr><td><div class="traffic-entity">';
+                if (c.image_url) {
+                    html += '<img src="' + c.image_url + '" class="traffic-entity-image" alt="' + c.name + '" loading="lazy">';
+                } else {
+                    html += '<div class="traffic-entity-image d-flex align-items-center justify-content-center">🗂</div>';
+                }
+                html += '<div class="traffic-entity-name">' + c.name + '</div>';
+                html += '</div></td>';
+                html += '<td class="traffic-count">' + c.views + '</td>';
+                html += '<td class="traffic-count">' + c.unique_visitors + '</td>';
+                html += '</tr>';
+            }
+
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        })
+        .catch(function() {
+            container.innerHTML = '<div class="traffic-empty">Unable to load category data.</div>';
+        });
+}
+
+function loadTrafficSubcategories() {
+    if (trafficDataLoaded.subcategories) return;
+    trafficDataLoaded.subcategories = true;
+
+    var container = document.getElementById("traffic-subcategories-content");
+    if (!container) return;
+
+    fetch("/admin/traffic/subcategories")
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            if (data.error) {
+                container.innerHTML = '<div class="traffic-empty">Unable to load subcategory data.</div>';
+                return;
+            }
+
+            var subcategories = data.subcategory_traffic || [];
+            if (subcategories.length === 0) {
+                container.innerHTML = '<div class="traffic-empty">No subcategory views recorded yet.</div>';
+                return;
+            }
+
+            var html = '';
+            html += '<div class="traffic-table-wrap">';
+            html += '<table class="traffic-table">';
+            html += '<thead><tr><th>Subcategory</th><th>Category</th><th>Views</th><th>Unique Visitors</th></tr></thead>';
+            html += '<tbody>';
+
+            for (var i = 0; i < subcategories.length; i++) {
+                var s = subcategories[i];
+                html += '<tr><td><div class="traffic-entity">';
+                if (s.image_url) {
+                    html += '<img src="' + s.image_url + '" class="traffic-entity-image" alt="' + s.name + '" loading="lazy">';
+                } else {
+                    html += '<div class="traffic-entity-image d-flex align-items-center justify-content-center">📁</div>';
+                }
+                html += '<div class="traffic-entity-name">' + s.name + '</div>';
+                html += '</div></td>';
+                html += '<td>' + s.category_name + '</td>';
+                html += '<td class="traffic-count">' + s.views + '</td>';
+                html += '<td class="traffic-count">' + s.unique_visitors + '</td>';
+                html += '</tr>';
+            }
+
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        })
+        .catch(function() {
+            container.innerHTML = '<div class="traffic-empty">Unable to load subcategory data.</div>';
+        });
+}
+
 document.addEventListener(
     "DOMContentLoaded",
     function () {
@@ -1457,6 +1473,9 @@ document.addEventListener(
         createTrafficTrendChart(
             "hourly"
         );
+
+        // Load Products tab by default (already selected)
+        loadTrafficProducts();
 
     }
 );

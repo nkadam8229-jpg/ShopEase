@@ -3178,6 +3178,30 @@ def product_image_view(
         image_file,
         mimetype="image/webp"
     )
+
+
+# =========================================================
+# TRAFFIC PRODUCT IMAGE (SIMPLE ID-BASED)
+# =========================================================
+
+@admin_bp.route("/traffic/product-image/<int:image_id>")
+def traffic_product_image(image_id):
+    """Simple image endpoint for traffic page products."""
+    
+    if "admin_id" not in session:
+        return "", 401
+
+    image = db.session.get(ProductImage, image_id)
+    if not image:
+        return "", 404
+
+    storage = StorageService()
+    if not storage.exists(image.image_key):
+        return "", 404
+
+    image_file = storage.get_file(image.image_key)
+    from flask import send_file
+    return send_file(image_file, mimetype="image/webp")
 # =========================================================
 # SET PRIMARY PRODUCT IMAGE
 # =========================================================
@@ -5557,7 +5581,6 @@ def revenue():
 
 @admin_bp.route("/traffic")
 def traffic():
-
     from datetime import datetime, timedelta
 
     # =====================================================
@@ -5617,26 +5640,14 @@ def traffic():
 
     # =====================================================
     # AVERAGE SESSION DURATION
-    #
-    # MySQL performs the complete calculation.
-    # Flask receives only ONE value.
     # =====================================================
 
     session_stats = (
         db.session.query(
             TrafficEvent.session_id,
-
-            func.min(
-                TrafficEvent.created_at
-            ).label("start_time"),
-
-            func.max(
-                TrafficEvent.created_at
-            ).label("end_time"),
-
-            func.count(
-                TrafficEvent.id
-            ).label("event_count")
+            func.min(TrafficEvent.created_at).label("start_time"),
+            func.max(TrafficEvent.created_at).label("end_time"),
+            func.count(TrafficEvent.id).label("event_count")
         )
         .filter(
             TrafficEvent.session_id.isnot(None),
@@ -5646,23 +5657,7 @@ def traffic():
             TrafficEvent.session_id
         )
         .having(
-            func.count(
-                TrafficEvent.id
-            ) >= 2
-        )
-        .having(
-            func.timestampdiff(
-                literal_column("SECOND"),
-                func.min(
-                    TrafficEvent.created_at
-                ),
-                func.max(
-                    TrafficEvent.created_at
-                )
-            ).between(
-                0,
-                86400
-            )
+            func.count(TrafficEvent.id) >= 2
         )
         .subquery()
     )
@@ -5670,11 +5665,8 @@ def traffic():
     average_session_seconds = (
         db.session.query(
             func.avg(
-                func.timestampdiff(
-                    literal_column("SECOND"),
-                    session_stats.c.start_time,
-                    session_stats.c.end_time
-                )
+                session_stats.c.end_time -
+                session_stats.c.start_time
             )
         )
         .scalar()
@@ -5682,9 +5674,7 @@ def traffic():
     )
 
     average_session_minutes = round(
-        float(
-            average_session_seconds
-        ) / 60,
+        float(average_session_seconds) / 60,
         1
     )
 
@@ -5697,7 +5687,6 @@ def traffic():
             func.hour(
                 TrafficEvent.created_at
             ).label("hour"),
-
             func.count(
                 func.distinct(
                     TrafficEvent.visitor_id
@@ -5762,7 +5751,6 @@ def traffic():
             func.date(
                 TrafficEvent.created_at
             ).label("traffic_date"),
-
             func.count(
                 func.distinct(
                     TrafficEvent.visitor_id
@@ -5807,11 +5795,9 @@ def traffic():
             func.year(
                 TrafficEvent.created_at
             ).label("traffic_year"),
-
             func.month(
                 TrafficEvent.created_at
             ).label("traffic_month"),
-
             func.count(
                 func.distinct(
                     TrafficEvent.visitor_id
@@ -5873,8 +5859,6 @@ def traffic():
 
     # =====================================================
     # TOTAL EVENT VIEWS
-    #
-    # MySQL performs the counting.
     # =====================================================
 
     event_counts = dict(
@@ -5917,363 +5901,165 @@ def traffic():
     )
 
     # =====================================================
-    # TOP PRODUCTS
-    #
-    # MySQL calculates:
-    # - total views
-    # - unique visitors
-    #
-    # Only the top 10 are returned.
-    # =====================================================
-
-    top_product_rows = (
-        db.session.query(
-            TrafficEvent.product_id.label(
-                "product_id"
-            ),
-
-            func.count(
-                TrafficEvent.id
-            ).label("views"),
-
-            func.count(
-                func.distinct(
-                    TrafficEvent.visitor_id
-                )
-            ).label("unique_visitors")
-        )
-        .filter(
-            TrafficEvent.event_type
-            == "product_view",
-
-            TrafficEvent.product_id.isnot(None)
-        )
-        .group_by(
-            TrafficEvent.product_id
-        )
-        .order_by(
-            func.count(
-                TrafficEvent.id
-            ).desc()
-        )
-        .limit(10)
-        .all()
-    )
-
-    top_product_ids = [
-        row.product_id
-        for row in top_product_rows
-    ]
-
-    products_by_id = {}
-
-    if top_product_ids:
-
-        products = (
-            Product.query
-            .options(
-                joinedload(
-                    Product.images
-                )
-            )
-            .filter(
-                Product.id.in_(
-                    top_product_ids
-                )
-            )
-            .all()
-        )
-
-        products_by_id = {
-            product.id: product
-            for product in products
-        }
-
-    top_products = []
-
-    for row in top_product_rows:
-
-        product = products_by_id.get(
-            row.product_id
-        )
-
-        if not product:
-            continue
-
-        image = None
-
-        if product.images:
-
-            image = next(
-                (
-                    item
-                    for item in product.images
-                    if item.is_primary
-                ),
-                product.images[0]
-            )
-
-        top_products.append(
-            {
-                "id": product.id,
-
-                "name": product.name,
-
-                "views": int(
-                    row.views or 0
-                ),
-
-                "unique_visitors": int(
-                    row.unique_visitors or 0
-                ),
-
-                "image_id": (
-                    image.id
-                    if image
-                    else None
-                )
-            }
-        )
-
-    # =====================================================
-    # CATEGORY TRAFFIC
-    # =====================================================
-
-    category_rows = (
-        db.session.query(
-            Category.id.label(
-                "category_id"
-            ),
-
-            Category.name.label(
-                "category_name"
-            ),
-
-            Category.image_key.label(
-                "image_key"
-            ),
-
-            func.count(
-                TrafficEvent.id
-            ).label("views"),
-
-            func.count(
-                func.distinct(
-                    TrafficEvent.visitor_id
-                )
-            ).label("unique_visitors")
-        )
-        .join(
-            TrafficEvent,
-            TrafficEvent.category_id
-            == Category.id
-        )
-        .filter(
-            TrafficEvent.event_type
-            == "category_view"
-        )
-        .group_by(
-            Category.id,
-            Category.name,
-            Category.image_key
-        )
-        .order_by(
-            func.count(
-                TrafficEvent.id
-            ).desc()
-        )
-        .all()
-    )
-
-    category_traffic = [
-        {
-            "id": row.category_id,
-
-            "name": row.category_name,
-
-            "views": int(
-                row.views or 0
-            ),
-
-            "unique_visitors": int(
-                row.unique_visitors or 0
-            ),
-
-            "image_url": (
-                url_for(
-                    "admin.category_image",
-                    category_id=row.category_id
-                )
-                if row.image_key
-                else None
-            )
-        }
-        for row in category_rows
-    ]
-
-    # =====================================================
-    # SUBCATEGORY TRAFFIC
-    # =====================================================
-
-    subcategory_rows = (
-        db.session.query(
-            Subcategory.id.label(
-                "subcategory_id"
-            ),
-
-            Subcategory.name.label(
-                "subcategory_name"
-            ),
-
-            Subcategory.image_key.label(
-                "image_key"
-            ),
-
-            Category.name.label(
-                "category_name"
-            ),
-
-            func.count(
-                TrafficEvent.id
-            ).label("views"),
-
-            func.count(
-                func.distinct(
-                    TrafficEvent.visitor_id
-                )
-            ).label("unique_visitors")
-        )
-        .join(
-            TrafficEvent,
-            TrafficEvent.subcategory_id
-            == Subcategory.id
-        )
-        .join(
-            Category,
-            Category.id
-            == Subcategory.category_id
-        )
-        .filter(
-            TrafficEvent.event_type
-            == "subcategory_view"
-        )
-        .group_by(
-            Subcategory.id,
-            Subcategory.name,
-            Subcategory.image_key,
-            Category.name
-        )
-        .order_by(
-            func.count(
-                TrafficEvent.id
-            ).desc()
-        )
-        .all()
-    )
-
-    subcategory_traffic = [
-        {
-            "id": row.subcategory_id,
-
-            "name": row.subcategory_name,
-
-            "category_name": (
-                row.category_name
-                if row.category_name
-                else "—"
-            ),
-
-            "views": int(
-                row.views or 0
-            ),
-
-            "unique_visitors": int(
-                row.unique_visitors or 0
-            ),
-
-            "image_url": (
-                url_for(
-                    "admin.subcategory_image",
-                    subcategory_id=row.subcategory_id
-                )
-                if row.image_key
-                else None
-            )
-        }
-        for row in subcategory_rows
-    ]
-
-    # =====================================================
-    # RENDER
+    # RENDER - ENTITY DATA LOADED LAZILY VIA AJAX
     # =====================================================
 
     return render_template(
         "admin/traffic.html",
 
         total_visitors=total_visitors,
-
         logged_in_visitors=logged_in_visitors,
-
         guest_visitors=guest_visitors,
-
         total_sessions=total_sessions,
-
-        average_session_minutes=(
-            average_session_minutes
-        ),
-
-        total_page_views=(
-            total_page_views
-        ),
-
-        total_product_views=(
-            total_product_views
-        ),
-
-        total_category_views=(
-            total_category_views
-        ),
-
-        total_subcategory_views=(
-            total_subcategory_views
-        ),
-
+        average_session_minutes=average_session_minutes,
+        total_page_views=total_page_views,
+        total_product_views=total_product_views,
+        total_category_views=total_category_views,
+        total_subcategory_views=total_subcategory_views,
         peak_hour=peak_hour,
-
-        peak_hour_visitors=(
-            peak_hour_visitors
-        ),
-
+        peak_hour_visitors=peak_hour_visitors,
         hourly_labels=hourly_labels,
-
         hourly_values=hourly_values,
-
         daily_labels=daily_labels,
-
         daily_values=daily_values,
-
         monthly_labels=monthly_labels,
-
         monthly_values=monthly_values,
-
-        visitor_type_labels=(
-            visitor_type_labels
-        ),
-
-        visitor_type_values=(
-            visitor_type_values
-        ),
-
-        top_products=top_products,
-
-        category_traffic=(
-            category_traffic
-        ),
-
-        subcategory_traffic=(
-            subcategory_traffic
-        )
+        visitor_type_labels=visitor_type_labels,
+        visitor_type_values=visitor_type_values
     )
+
+# =========================================================
+# TRAFFIC AJAX ENDPOINTS (LAZY LOAD)
+# =========================================================
+
+@admin_bp.route("/traffic/products")
+def traffic_products():
+    """AJAX endpoint for top products - loaded when Products tab is clicked."""
+    
+    if "admin_id" not in session:
+        return {"error": "Unauthorized"}, 401
+
+    top_product_rows = (
+        db.session.query(
+            TrafficEvent.product_id.label("product_id"),
+            func.count(TrafficEvent.id).label("views"),
+            func.count(func.distinct(TrafficEvent.visitor_id)).label("unique_visitors")
+        )
+        .filter(
+            TrafficEvent.event_type == "product_view",
+            TrafficEvent.product_id.isnot(None)
+        )
+        .group_by(TrafficEvent.product_id)
+        .order_by(func.count(TrafficEvent.id).desc())
+        .limit(10)
+        .all()
+    )
+
+    top_product_ids = [row.product_id for row in top_product_rows]
+
+    products_by_id = {}
+    if top_product_ids:
+        products = (
+            Product.query
+            .options(joinedload(Product.images))
+            .filter(Product.id.in_(top_product_ids))
+            .all()
+        )
+        products_by_id = {product.id: product for product in products}
+
+    top_products = []
+    for row in top_product_rows:
+        product = products_by_id.get(row.product_id)
+        if not product:
+            continue
+        image = None
+        if product.images:
+            image = next((item for item in product.images if item.is_primary), product.images[0])
+        top_products.append({
+            "id": product.id,
+            "name": product.name,
+            "views": int(row.views or 0),
+            "unique_visitors": int(row.unique_visitors or 0),
+            "image_id": image.id if image else None
+        })
+
+    return {"top_products": top_products}
+
+
+@admin_bp.route("/traffic/categories")
+def traffic_categories():
+    """AJAX endpoint for category traffic - loaded when Categories tab is clicked."""
+    
+    if "admin_id" not in session:
+        return {"error": "Unauthorized"}, 401
+
+    category_rows = (
+        db.session.query(
+            Category.id.label("category_id"),
+            Category.name.label("category_name"),
+            Category.image_key.label("image_key"),
+            func.count(TrafficEvent.id).label("views"),
+            func.count(func.distinct(TrafficEvent.visitor_id)).label("unique_visitors")
+        )
+        .join(TrafficEvent, TrafficEvent.category_id == Category.id)
+        .filter(TrafficEvent.event_type == "category_view")
+        .group_by(Category.id, Category.name, Category.image_key)
+        .order_by(func.count(TrafficEvent.id).desc())
+        .all()
+    )
+
+    category_traffic = [
+        {
+            "id": row.category_id,
+            "name": row.category_name,
+            "views": int(row.views or 0),
+            "unique_visitors": int(row.unique_visitors or 0),
+            "image_url": url_for("admin.category_image", category_id=row.category_id) if row.image_key else None
+        }
+        for row in category_rows
+    ]
+
+    return {"category_traffic": category_traffic}
+
+
+@admin_bp.route("/traffic/subcategories")
+def traffic_subcategories():
+    """AJAX endpoint for subcategory traffic - loaded when Subcategories tab is clicked."""
+    
+    if "admin_id" not in session:
+        return {"error": "Unauthorized"}, 401
+
+    subcategory_rows = (
+        db.session.query(
+            Subcategory.id.label("subcategory_id"),
+            Subcategory.name.label("subcategory_name"),
+            Subcategory.image_key.label("image_key"),
+            Category.name.label("category_name"),
+            func.count(TrafficEvent.id).label("views"),
+            func.count(func.distinct(TrafficEvent.visitor_id)).label("unique_visitors")
+        )
+        .join(TrafficEvent, TrafficEvent.subcategory_id == Subcategory.id)
+        .join(Category, Category.id == Subcategory.category_id)
+        .filter(TrafficEvent.event_type == "subcategory_view")
+        .group_by(Subcategory.id, Subcategory.name, Subcategory.image_key, Category.name)
+        .order_by(func.count(TrafficEvent.id).desc())
+        .all()
+    )
+
+    subcategory_traffic = [
+        {
+            "id": row.subcategory_id,
+            "name": row.subcategory_name,
+            "category_name": row.category_name if row.category_name else "—",
+            "views": int(row.views or 0),
+            "unique_visitors": int(row.unique_visitors or 0),
+            "image_url": url_for("admin.subcategory_image", subcategory_id=row.subcategory_id) if row.image_key else None
+        }
+        for row in subcategory_rows
+    ]
+
+    return {"subcategory_traffic": subcategory_traffic}
+
 # =========================================================
 # BANNER MANAGEMENT
 # =========================================================
